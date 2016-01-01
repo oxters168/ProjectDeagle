@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -253,7 +253,7 @@ public class AtlasMapper {
 
         return new Vector2(-1, -1);
     }*/
-    public Vector2 FindEmptySpaceFor(int requiredWidth, int requiredHeight)
+    /*public Vector2 FindEmptySpaceFor(int requiredWidth, int requiredHeight)
     {
         Color[] flattenedAtlas = atlas.GetPixels();
 
@@ -309,7 +309,66 @@ public class AtlasMapper {
             }
         }
         return new Vector2(-1, -1);
+    }*/
+    public Vector2 FindEmptySpaceFor(int requiredWidth, int requiredHeight)
+    {
+        Color[] flattenedAtlas = atlas.GetPixels();
+
+        for (int row = 0; row < atlas.height; row += requiredHeight / 2)
+        {
+            for (int col = 0; col < atlas.width; col += requiredWidth / 2)
+            {
+                int flatSearchIndex = (row * atlas.width) + col;
+                
+                if (FivePointCheck(flattenedAtlas, atlas.width, requiredWidth, requiredHeight, flatSearchIndex))
+                {
+                    #region Check Entire Area Empty
+                    bool doesntFit = false;
+
+                    for (int verifyRow = 0; verifyRow < requiredHeight; verifyRow++)
+                    {
+                        for (int verifyCol = 0; verifyCol < requiredWidth; verifyCol++)
+                        {
+                            int flatVerifyIndex = flatSearchIndex + (verifyRow * (atlas.width - 0)) + verifyCol;
+                            if (flatVerifyIndex >= flattenedAtlas.Length || ColorDiff(flattenedAtlas[flatVerifyIndex], emptySpaceColor) >= 0.1f)
+                            {
+                                doesntFit = true;
+                                break;
+                            }
+                        }
+
+                        if (doesntFit)
+                            break;
+                    }
+
+                    if (!doesntFit)
+                        return new Vector2(flatSearchIndex % atlas.width, flatSearchIndex / atlas.height);
+                    #endregion
+                }
+            }
+            
+            col = 0;
+        }
+        return new Vector2(-1, -1);
     }
+    
+    public static bool FivePointCheck(Color[] flattenedImage, int imageWidth, int requiredWidth, int requiredHeight, int bottomLeftFlatIndex)
+    {
+    		bool fivePointCheck = true;
+    		
+	    int bottomLeftCorner = bottomLeftFlatIndex;
+	    int bottomRightCornerFlatIndex = bottomLeftFlatIndex + requiredWidth - 1;
+	    int topLeftCornerFlatIndex = bottomLeftFlatIndex + ((imageWidth - 0) * (requiredHeight - 1));
+	    int topRightCornerFlatIndex = bottomLeftFlatIndex + ((imageWidth - 0) * (requiredHeight - 1)) + (requiredWidth - 1);
+	    int centerFlatIndex = bottomLeftFlatIndex + ((imageWidth - 0) * ((requiredHeight - 1) / 2)) + ((requiredWidth - 1) / 2);
+	     if (ColorDiff(flattenedImage[bottomLeftCorner], emptySpaceColor) >= 0.1f) fivePointCheck = false;
+	    if (bottomRightCornerFlatIndex >= flattenedImage.Length || ColorDiff(flattenedImage[bottomRightCornerFlatIndex], emptySpaceColor) >= 0.1f) fivePointCheck = false;
+	    if (topLeftCornerFlatIndex >= flattenedImage.Length || ColorDiff(flattenedImage[topLeftCornerFlatIndex], emptySpaceColor) >= 0.1f) fivePointCheck = false;
+	    if (topRightCornerFlatIndex >= flattenedImage.Length || ColorDiff(flattenedImage[topRightCornerFlatIndex], emptySpaceColor) >= 0.1f) fivePointCheck = false;
+	    if (centerFlatIndex >= flattenedImage.Length || ColorDiff(flattenedImage[centerFlatIndex], emptySpaceColor) >= 0.1f) fivePointCheck = false;
+	    
+	    return fivePointCheck;
+	}
 
     public void ApplyRatio()
     {
