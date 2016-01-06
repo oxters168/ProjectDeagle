@@ -5,98 +5,109 @@ using System.Collections.Generic;
 public class AtlasMapper {
 
     public Texture2D atlas;
-    public Rect[] mappedUVs { get { return coordinates.ToArray(); } private set { } }
-    private List<Rect> coordinates;
+    public Rect[] mappedUVs { get { return uvPoints != null ? uvPoints.ToArray() : null; } private set { } }
+    private List<Rect> coordinates, uvPoints;
     public int maxSize = 2048;
     public float ratio = 1;
     private static Color emptySpaceColor = Color.green;
 
     public AtlasMapper()
     {
-        atlas = new Texture2D(16, 16);
-        Color[] greenScreen = new Color[16 * 16];
-        for (int i = 0; i < greenScreen.Length; i++)
-        {
-            greenScreen[i] = Color.green;
-        }
-        atlas.SetPixels(greenScreen);
+        atlas = new Texture2D(0, 0);
+        //Color[] greenScreen = new Color[16 * 16];
+        //for (int i = 0; i < greenScreen.Length; i++)
+        //{
+        //    greenScreen[i] = Color.green;
+        //}
+        //atlas.SetPixels(greenScreen);
         coordinates = new List<Rect>();
+        uvPoints = new List<Rect>();
     }
 		
-		public void AddTextures(params Texture2D[] textures)
+	public void AddTextures(params Texture2D[] textures)
+	{
+		foreach(Texture2D texture in textures)
 		{
-			foreach(Texture2D texture in textures)
+			if(texture != null)
 			{
-				if(texture != null)
+				Rect uv = new Rect();
+					
+				Texture2D scaledTexture = new Texture2D(texture.width, texture.height);
+				scaledTexture.SetPixels(texture.GetPixels());
+				TextureScale.Point(scaledTexture, ((int)(scaledTexture.width / ratio)), ((int)(scaledTexture.height / ratio)));
+					
+				int imageX = 0, imageY = 0;
+				if(coordinates != null && coordinates.Count > 0)
 				{
-					Rect uv = new Rect();
+					imageX = (int) (coordinates[coordinates.Count - 1].x + coordinates[coordinates.Count - 1].width);
+					imageY = (int) coordinates[coordinates.Count - 1].y;
+				}
 					
-					Texture2D scaledTexture = new Texture2D(texture.width, texture.height);
-					scaledTexture.SetPixels(texture.GetPixels());
-					TextureScale.Point(scaledTexture, ((int)(scaledTexture.width / ratio)), ((int)(scaledTexture.height / ratio)));
+				Color[] oldAtlas = atlas.GetPixels();
+				int oldWidth = atlas.width, oldHeight = atlas.height;
 					
-					int imageX = 0, imageY = 0;
-					if(coordinates != null && coordinates.Count > 0)
-					{
-						imageX = coordinates[coordinates.Count - 1].x + coordinates[coordinates.Count - 1].width;
-						imageY = coordinates[coordinates.Count - 1].y;
-					}
+				if(scaledTexture.width > maxSize)
+				{
+					//Resize atlas to fit image and change image coordinates to top left corner
+					atlas.Resize(scaledTexture.width, atlas.height + scaledTexture.height);
+					imageX = 0;
+					imageY = oldHeight;
+				}
+				else if(imageX + scaledTexture.width > maxSize)
+				{
+					//Resize atlas to fit image and change image coordinates to top left corner
+					atlas.Resize(atlas.width, atlas.height + scaledTexture.height);
+					imageX = 0;
+					imageY = oldHeight;
+				}
+				else if(imageX + scaledTexture.width > atlas.width || imageY + scaledTexture.height > atlas.height)
+				{
+                    //Resize atlas to fit image on the right side
+					atlas.Resize((imageX + scaledTexture.width > atlas.width) ? (atlas.width + (scaledTexture.width - ((atlas.width - 1) - imageX))) : atlas.width, (imageY + scaledTexture.height > atlas.height) ? (atlas.height + (scaledTexture.height - ((atlas.height - 1) - imageY))) : atlas.height);
+				}
 					
-					Color[] oldAtlas = atlas.GetPixels();
-					int oldWidth = atlas.width, oldHeight = atlas.Height;
+				//Add previous images back in
+				atlas.SetPixels(0, 0, oldWidth, oldHeight, oldAtlas);
 					
-					if(imageX + scaledTexture.width > maxSize && imageY + scaledTexture.height > maxSize)
-					{
-						//Resize atlas to fit image and change image coordinates to top left corner
-						atlas.Resize(scaledTexture.width, atlas.height + scaledTexture.height);
-						imageX = 0;
-						imageY = oldHeight;
-					}
-					else if(imageX + scaledTexture.width > maxSize)
-					{
-						//Resize atlas to fit image and change image coordinates to top left corner
-						atlas.Resize(atlas.width, atlas.height + scaledTexture.height);
-						imageX = 0;
-						imageY = oldHeight;
-					}
-					else
-					{
-						atlas.Resize(atlas.width + scaledTexture.width, atlas.height);
-					}
+				//Add image to atlas at image coordinates
+				atlas.SetPixels(imageX, imageY, scaledTexture.width, scaledTexture.height, scaledTexture.GetPixels());
 					
-					//Add previous images back in
-					atlas.SetPixels(0, 0, oldWidth, oldHeight, oldAtlas);
+				//Set UV coordinates
+				uv.x = imageX;
+				uv.y = imageY;
+				uv.width = scaledTexture.width;
+				uv.height = scaledTexture.height;
+                coordinates.Add(uv);
+                uv.x = (uv.x - (0 / ratio)) / atlas.width; //38
+                uv.y = (uv.y + (0 / ratio)) / atlas.height; //6
+                uv.width /= atlas.width;
+                uv.height /= atlas.height;
+                uvPoints.Add(uv);
 					
-					//Add image to atlas at image coordinates
-					atlas.SetPixels(imageX, imageY, scaledTexture.width, scaledTexture.Height, scaledTexture.GetPixels());
-					
-					//Set UV coordinates
-					uv.x = imageX;
-					uv.y = imageY;
-					uv.width = scaledTexture.width;
-					uv.height = scaledTexture.height;
-					
-					if (atlas.width > maxSize || atlas.height > maxSize)
-					{
-					    //Scale down atlas
-					    float changeInRatio = ratio;
-					    ratio = ((float) Mathf.Max(atlas.width, atlas.height)) / maxSize;
-					    changeInRatio = ratio - changeInRatio;
-					    TextureScale.Point(atlas, (int)(atlas.width / ratio), (int)(atlas.height / ratio));
-					    ApplyRatio(changeInRatio);
-					}
-					
-					coordinates.Add(uv);
-					Texture2D.DestroyImmediate(scaledTexture);
-					scaledTexture = null;
+				if (atlas.width > maxSize || atlas.height > maxSize)
+				{
+					//Scale down atlas
+					//float changeInRatio = ratio;
+					float decreasedSizeRatio = ((float) Mathf.Max(atlas.width, atlas.height)) / maxSize;
+                    int decreasedWidth = (int)(atlas.width / decreasedSizeRatio), decreasedHeight = (int)(atlas.height / decreasedSizeRatio);
+                    //decreasedSizeRatio = ((atlas.width / decreasedWidth) + (atlas.height / decreasedHeight)) / 2;
+                    //decreasedWidth = (int)(atlas.width / decreasedSizeRatio);
+                    //decreasedHeight = (int)(atlas.height / decreasedSizeRatio);
+                    ratio += decreasedSizeRatio - 1;
+					//changeInRatio = sizedDownBy - changeInRatio;
+					TextureScale.Point(atlas, decreasedWidth, decreasedHeight);
+					ApplyRatio(decreasedSizeRatio);
 				}
 				
-				System.GC.collect();
+				Texture2D.DestroyImmediate(scaledTexture);
+				scaledTexture = null;
 			}
-			
-			atlas.Apply();
+				
+			System.GC.Collect();
 		}
-		
+			
+		atlas.Apply();
+	}
     /*public void AddTextures(params Texture2D[] textures)
     {
         int textureCount = 0;
@@ -421,7 +432,7 @@ public class AtlasMapper {
                 }
             }
             
-            col = 0;
+            //col = 0;
         }
         return new Vector2(-1, -1);
     }
@@ -454,6 +465,11 @@ public class AtlasMapper {
             uv.width = coordinates[i].width / r;
             uv.height = coordinates[i].height / r;
             coordinates[i] = uv;
+            uv.x = (uv.x - (16 / ratio)) / atlas.width; //38
+            uv.y = (uv.y + (8 / ratio)) / atlas.height; //6
+            uv.width = (uv.width - (8 / ratio)) / atlas.width;
+            uv.height = (uv.height - (4 / ratio)) / atlas.height;
+            uvPoints[i] = uv;
         }
     }
 
