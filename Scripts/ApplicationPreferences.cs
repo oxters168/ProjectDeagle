@@ -10,6 +10,7 @@ public class ApplicationPreferences {
     public static int maxSizeAllowed = 128;
     public static string mapsDir = "D:/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/maps/";
     public static string texturesDir = "D:/CSGOModels/Textures/";
+    public static Color ctColor = new Color(0, 0, 1), tColor = new Color(1, 0, 0);
 
     public static void LoadSavedPreferences()
     {

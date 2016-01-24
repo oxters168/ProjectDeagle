@@ -12,8 +12,8 @@ public class BSPParser
 	int version;
 	int mapRevision;
 
-	lump_t[] lumps;
-	object[] lumpData;
+	public lump_t[] lumps;
+	public object[] lumpData;
 
 	public BSPParser(Stream stream)
 	{

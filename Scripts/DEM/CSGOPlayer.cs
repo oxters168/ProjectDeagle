@@ -67,7 +67,8 @@ public class CSGOPlayer : MonoBehaviour {
             if(chestPosition == null) chestPosition = animator.GetBoneTransform(HumanBodyBones.Chest);
             if (weaponRHPosition == null)
             {
-                weaponRHPosition = animator.GetBoneTransform(HumanBodyBones.RightHand).FindChild("weapon_hand_R");
+                weaponRHPosition = animator.GetBoneTransform(HumanBodyBones.RightHand);
+                if (weaponRHPosition != null && weaponRHPosition.FindChild("weapon_hand_R") != null) weaponRHPosition = weaponRHPosition.FindChild("weapon_hand_R");
             }
         }
 
@@ -125,8 +126,10 @@ public class CSGOPlayer : MonoBehaviour {
                 if (weapon != null)
                 {
                     weapon.transform.parent = weaponRHPosition;
-                    weapon.transform.localPosition = new Vector3(0.02f, 0, -0.04f);
-                    weapon.transform.localRotation = Quaternion.Euler(350, 280, 270);
+                    //weapon.transform.localPosition = new Vector3(0.02f, 0, -0.04f);
+                    weapon.transform.localPosition = new Vector3(-3.8f, -0.82f, 0);
+                    //weapon.transform.localRotation = Quaternion.Euler(350, 280, 270);
+                    weapon.transform.localRotation = Quaternion.Euler(15, 270, 90);
                 }
             }
         }
@@ -188,16 +191,29 @@ public class CSGOPlayer : MonoBehaviour {
         if (currentTeam != playerInfo.statsInTick[replay.seekIndex].teamID)
         {
             GameObject newAppearance = null;
+            Material teamMaterial = new Material(Shader.Find("Standard"));
             //currentTeam = playerInfo.statsInTick[replay.seekIndex].teamID;
             if (playerInfo.statsInTick[replay.seekIndex].teamID == replay.demoTicks[replay.seekIndex].ctID)
             {
-                GameObject[] ct = Resources.LoadAll<GameObject>("Prefabs/CT");
-                newAppearance = GameObject.Instantiate(ct[Random.Range(0, ct.Length)]) as GameObject;
+                //GameObject[] ct = Resources.LoadAll<GameObject>("Prefabs/CT");
+                //newAppearance = GameObject.Instantiate(ct[Random.Range(0, ct.Length)]) as GameObject;
+                newAppearance = GameObject.Instantiate(Resources.Load<GameObject>("Prefabs/Faceless")) as GameObject;
+                teamMaterial.color = ApplicationPreferences.ctColor;
+                Renderer facelessRenderer = newAppearance.GetComponentInChildren<Renderer>();
+                if (facelessRenderer != null) facelessRenderer.material = teamMaterial;
+                newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CSGOHumanoidController");
+                newAppearance.GetComponent<Animator>().applyRootMotion = false;
             }
             else if (playerInfo.statsInTick[replay.seekIndex].teamID == replay.demoTicks[replay.seekIndex].tID)
             {
-                GameObject[] t = Resources.LoadAll<GameObject>("Prefabs/T");
-                newAppearance = GameObject.Instantiate(t[Random.Range(0, t.Length)]) as GameObject;
+                //GameObject[] t = Resources.LoadAll<GameObject>("Prefabs/T");
+                //newAppearance = GameObject.Instantiate(t[Random.Range(0, t.Length)]) as GameObject;
+                newAppearance = GameObject.Instantiate(Resources.Load<GameObject>("Prefabs/Faceless")) as GameObject;
+                teamMaterial.color = ApplicationPreferences.tColor;
+                Renderer facelessRenderer = newAppearance.GetComponentInChildren<Renderer>();
+                if (facelessRenderer != null) facelessRenderer.material = teamMaterial;
+                newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CSGOHumanoidController");
+                newAppearance.GetComponent<Animator>().applyRootMotion = false;
             }
             if (newAppearance != null)
             {
@@ -212,6 +228,21 @@ public class CSGOPlayer : MonoBehaviour {
                 //GameObject.DestroyImmediate(oldGameObject);
             }
         }
+    }
+
+    public T FindComponentIn<T>(GameObject go)
+    {
+        T theComponent = default(T);
+        theComponent = go.GetComponent<T>();
+        if (theComponent == null)
+        {
+            foreach (Transform t in go.transform)
+            {
+                theComponent = t.GetComponent<T>();
+                if (theComponent != null) break;
+            }
+        }
+        return theComponent;
     }
 
     public void Hide(bool hide)

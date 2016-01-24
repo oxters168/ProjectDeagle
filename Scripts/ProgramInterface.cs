@@ -51,6 +51,10 @@ public class ProgramInterface : MonoBehaviour {
     OxButton backButton;
     //Replay aReplay;
 
+    private bool showSplash = true;
+    private int splashFrame = 1;
+    private float splashFPS = 24, lastFrameChange = 0;
+
     Demo currentReplay;
     int currentMap = 0;
 
@@ -149,6 +153,12 @@ public class ProgramInterface : MonoBehaviour {
     
     void OnGUI()
     {
+        if (showSplash)
+        {
+            PlaySplashScreen();
+            return;
+        }
+
         if (currentMenu == Menu.Main) MainMenu();
         else if (currentMenu == Menu.Live) LiveMenu();
         else if (currentMenu == Menu.Replays) ReplaysMenu();
@@ -158,6 +168,36 @@ public class ProgramInterface : MonoBehaviour {
         else if (currentMenu == Menu.Settings) SettingsMenu();
         else if (currentMenu == Menu.MapDir) MapDirBrowser();
         else if (currentMenu == Menu.TextureDir) TextureDirBrowser();
+    }
+    private void PlaySplashScreen()
+    {
+        Texture2D currentFrame = Resources.Load<Texture2D>("Textures/Splash/SplashFrame" + splashFrame);
+        if (currentFrame != null)
+        {
+            int newWidth = currentFrame.width, newHeight = currentFrame.height;
+            if (Screen.width < Screen.height)
+            {
+                newWidth = (int)(Screen.width * 0.25f);
+                newHeight = (int)(currentFrame.height / (currentFrame.width / ((float)newWidth)));
+            }
+            else
+            {
+                newHeight = (int)(Screen.height * 0.25f);
+                newWidth = (int)(currentFrame.width / (currentFrame.height / ((float)newHeight)));
+            }
+            TextureScale.Point(currentFrame, newWidth, newHeight);
+            GUI.DrawTexture(new Rect(Screen.width / 2f - currentFrame.width / 2f, Screen.height / 2f - currentFrame.height / 2f, currentFrame.width, currentFrame.height), currentFrame);
+            if (Time.time - lastFrameChange >= 1 / splashFPS)
+            {
+                splashFrame++;
+                lastFrameChange = Time.time;
+            }
+        }
+        else
+        {
+            Camera.main.backgroundColor = new Color((243f / 255f), (179f / 255f), (73f / 255f));
+            showSplash = false;
+        }
     }
 
     private void MakeMenus()
@@ -598,7 +638,8 @@ public class ProgramInterface : MonoBehaviour {
             BSPMap loadedMap = new BSPMap(mapFileChooser.text.Substring(mapFileChooser.text.LastIndexOf("/") + 1));
             if (!loadedMap.alreadyMade)
             {
-                loadedMap.MakeMap();
+                //CoroutineRunner(loadedMap.BuildMap);
+                loadedMap.BuildMap();
                 if (BSPMap.loadedMaps.Count > 1) BSPMap.loadedMaps[BSPMap.loadedMaps.Keys.ElementAt(currentMap)].SetVisibility(false);
                 currentMap = BSPMap.loadedMaps.Count - 1;
             }
@@ -826,5 +867,16 @@ public class ProgramInterface : MonoBehaviour {
                 }
             }
         }
+    }
+
+    //public void LoadMap(BSPMap map)
+    //{
+    //    StartCoroutine(map.BuildMap());
+    //}
+
+    public delegate IEnumerator CoroutineMethod();
+    public void CoroutineRunner(CoroutineMethod toBeRun)
+    {
+        StartCoroutine(toBeRun());
     }
 }

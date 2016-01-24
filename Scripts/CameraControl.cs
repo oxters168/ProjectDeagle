@@ -14,6 +14,9 @@ public class CameraControl : MonoBehaviour {
     private int firstTouch = -1, secondTouch = -1;
     private float fingerDistance = 0;
 
+    public Color leftColor = Color.green, rightColor = Color.green, upColor = Color.green, downColor = Color.green;
+    public float crosshairLength = 15f, crosshairGap = 3f, crosshairThickness = 2f;
+
 	void Start ()
     {
         GoToDefault();
@@ -156,20 +159,37 @@ public class CameraControl : MonoBehaviour {
             GUI.Label(new Rect((Screen.width / 2f) + 1f, 1f, 0, 0), target.name, blackFont);
             GUI.Label(new Rect((Screen.width / 2f), 0, 0, 0), target.name, whiteFont);
 
-            if (distance <= 0)
-            {
-                //GUIStyle crosshairStyle = new GUIStyle();
-                float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 1f, 1f, 0.2f, 0.2f);
-                float crosshairWidth = pratio * 1f;
-                float crosshairHeight = pratio * 1f;
-                float crosshairGap = crosshairWidth * (20f / 100f);
-                float crosshairLineWidth = crosshairWidth * (10f / 100f), crosshairLineHeight = crosshairHeight * (10f / 100f);
-                GUI.Button(new Rect((Screen.width / 2f) - (crosshairWidth / 2f), (Screen.height / 2f) - (crosshairLineHeight / 2f), (crosshairWidth / 2f) - (crosshairGap / 2f), crosshairLineHeight), ""); //Left
-                GUI.Button(new Rect((Screen.width / 2f) - (crosshairLineWidth / 2f), (Screen.height / 2f) - (crosshairHeight / 2f), crosshairLineWidth, (crosshairHeight / 2f) - (crosshairGap / 2f)), ""); //Top
-                GUI.Button(new Rect((Screen.width / 2f) + (crosshairGap / 2f), (Screen.height / 2f) - (crosshairLineHeight / 2f), (crosshairWidth / 2f) - (crosshairGap / 2f), crosshairLineHeight), ""); //Right
-                GUI.Button(new Rect((Screen.width / 2f) - (crosshairLineWidth / 2f), (Screen.height / 2f) + (crosshairGap / 2f), crosshairLineWidth, (crosshairHeight / 2f) - (crosshairGap / 2f)), ""); //Bottom
-            }
+            if(distance <= 0) DrawCrosshair();
         }
+    }
+
+    public void DrawCrosshair()
+    {
+        //float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 0.25f, 0.25f, 0.1f, 0.1f);
+        //float crosshairWidth = pratio * 0.25f;
+        //float crosshairHeight = pratio * 0.25f;
+        //float crosshairGap = crosshairWidth * (crosshairGapMultiplier / 100f);
+        //float crosshairThickness = crosshairWidth * (crosshairThicknessMultiplier / 100f), crosshairLineHeight = crosshairHeight * (crosshairThicknessMultiplier / 100f);
+
+        GUIStyle crosshairStyle = new GUIStyle();
+        Texture2D tempTexture = new Texture2D(1, 1);
+
+        tempTexture.SetPixel(0, 0, leftColor);
+        tempTexture.Apply();
+        crosshairStyle.normal.background = tempTexture;
+        GUI.Label(new Rect((Screen.width / 2f) - crosshairLength - crosshairGap, (Screen.height / 2f) - (crosshairThickness / 2f), crosshairLength, crosshairThickness), "", crosshairStyle); //Left
+        tempTexture.SetPixel(0, 0, upColor);
+        tempTexture.Apply();
+        crosshairStyle.normal.background = tempTexture;
+        GUI.Label(new Rect((Screen.width / 2f) - (crosshairThickness / 2f), (Screen.height / 2f) - crosshairLength - crosshairGap, crosshairThickness, crosshairLength), "", crosshairStyle); //Top
+        tempTexture.SetPixel(0, 0, rightColor);
+        tempTexture.Apply();
+        crosshairStyle.normal.background = tempTexture;
+        GUI.Label(new Rect((Screen.width / 2f) + crosshairGap, (Screen.height / 2f) - (crosshairThickness / 2f), crosshairLength, crosshairThickness), "", crosshairStyle); //Right
+        tempTexture.SetPixel(0, 0, downColor);
+        tempTexture.Apply();
+        crosshairStyle.normal.background = tempTexture;
+        GUI.Label(new Rect((Screen.width / 2f) - (crosshairThickness / 2f), (Screen.height / 2f) + crosshairGap, crosshairThickness, crosshairLength), "", crosshairStyle); //Bottom
     }
 
     public void GoToDefault()

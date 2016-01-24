@@ -460,15 +460,15 @@ public class AtlasMapper {
         for (int i = 0; i < coordinates.Count; i++)
         {
             Rect uv = new Rect();
-            uv.x = coordinates[i].x / r;
-            uv.y = coordinates[i].y / r;
-            uv.width = coordinates[i].width / r;
-            uv.height = coordinates[i].height / r;
+            uv.x = Mathf.Floor(coordinates[i].x / r);
+            uv.y = Mathf.Ceil(coordinates[i].y / r);
+            uv.width = Mathf.Floor(coordinates[i].width / r);
+            uv.height = Mathf.Floor(coordinates[i].height / r);
             coordinates[i] = uv;
-            uv.x = (uv.x - (16 / ratio)) / atlas.width; //38
-            uv.y = (uv.y + (8 / ratio)) / atlas.height; //6
-            uv.width = (uv.width - (8 / ratio)) / atlas.width;
-            uv.height = (uv.height - (4 / ratio)) / atlas.height;
+            uv.x = (uv.x - (8 / ratio)) / atlas.width; //16
+            uv.y = (uv.y + (0 / ratio)) / atlas.height; //8
+            uv.width = (uv.width - (0 / ratio)) / atlas.width; //8
+            uv.height = (uv.height - (0 / ratio)) / atlas.height; //4
             uvPoints[i] = uv;
         }
     }

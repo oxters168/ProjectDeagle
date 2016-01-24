@@ -215,8 +215,14 @@ public class Demo
             demoParser.ParseToEnd();
             replayFile.Close();
 
-            if (BSPMap.loadedMaps.ContainsKey(demoParser.Map)) demoMap = BSPMap.loadedMaps[demoParser.Map];
-            else { demoMap = new BSPMap(demoParser.Map); demoMap.MakeMap(); }
+            if (BSPMap.loadedMaps.ContainsKey(demoParser.Map))
+                demoMap = BSPMap.loadedMaps[demoParser.Map];
+            else
+            {
+                demoMap = new BSPMap(demoParser.Map);
+                //Camera.main.GetComponent<ProgramInterface>().CoroutineRunner(demoMap.BuildMap);
+                demoMap.BuildMap();
+            }
 
             demoParser.Dispose();
         }

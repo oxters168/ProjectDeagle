@@ -51,7 +51,12 @@ public class BSPMap
         else alreadyMade = true;
     }
 
-    public GameObject MakeMap()
+    //public void BuildMap()
+    //{
+    //    StartCoroutine("StartBuilding");
+    //}
+
+    public void BuildMap()
     {
         mapTextures = new List<Texture2D>();
         textureLocations = new List<string>();
@@ -72,6 +77,8 @@ public class BSPMap
             string entities = bsp.GetEntities();
             Debug.Log("Map Entities: " + entities);
             vertices = bsp.GetVertices();
+            
+            //vertices = bsp.lumpData[3];
             //planes = bsp.GetPlanes();
             edges = bsp.GetEdges();
             //origFaces = bsp.GetOriginalFaces();
@@ -98,6 +105,7 @@ public class BSPMap
 
             mainSurfaceMaterial = Resources.Load<Material>("Materials/MapMaterial");
             mapGameObject = new GameObject(mapName);
+
             List<FaceMesh> allFaces = new List<FaceMesh>();
             #region Parse Faces
             foreach (dface_t face in faces)
@@ -153,7 +161,7 @@ public class BSPMap
                     else
                     {
                         TextAsset vmtTextAsset = Resources.Load<TextAsset>("Textures/Plain/" + currentFace.rawTexture);
-                        if(vmtTextAsset != null) vmtLines = vmtTextAsset.text.Split('\n');
+                        if (vmtTextAsset != null) vmtLines = vmtTextAsset.text.Split('\n');
                     }
 
                     if (vmtLines != null)
@@ -245,12 +253,16 @@ public class BSPMap
                     currentFace.mesh = MakeFace(face);
                     allFaces.Add(currentFace);
                 }
+
+                //Debug.Log("Added Face");
+                //yield return null;
             }
             #endregion
 
+            Debug.Log("Parsed " + allFaces.Count + " Faces");
+
             if (!ApplicationPreferences.combineMeshes)
             {
-                #region Make Seperate GameObjects for each Mesh
                 foreach (FaceMesh faceMesh in allFaces)
                 {
                     //GameObject faceGO = new GameObject(faceMesh.textureLocation);
@@ -290,43 +302,14 @@ public class BSPMap
                     }
                     faceGO.AddComponent<MeshRenderer>().material = faceMaterial;
                     #endregion
+
+                    //yield return null;
                 }
-                #endregion
+
+                Debug.Log("Made Seperate Meshes");
             }
             else
             {
-
-                #region Combine all face meshes into one
-                /*#region Create Atlas & Remap UVs
-                Texture2D packedMapTextures = new Texture2D(0, 0);
-                Rect[] uvReMappers = packedMapTextures.PackTextures(mapTextures.ToArray(), 0, 4096); //x,y: positions on atlas width,height: scale
-                Material mapAtlas = new Material(Shader.Find("Custom/Atlas Tiling"));
-                mapAtlas.mainTextureScale = new Vector2(1f, 1f);
-                mapAtlas.mainTexture = packedMapTextures;
-                //mapAtlas.mainTexture.wrapMode = TextureWrapMode.Clamp;
-                for (int i = 0; i < allFaces.Count; i++)
-                {
-                    //if (i < 10) { Debug.Log(i + " Triangles: " + allFaces[i].mesh.triangles.Length); }
-                    //int textureIndex = textureLocations.IndexOf(allFaces[i].textureLocation);
-                    int textureIndex = textureLocations.IndexOf(allFaces[i].rawTexture);
-                    Texture2D faceTexture = null;
-                    if (textureIndex > -1)
-                    {
-                        faceTexture = mapTextures[textureIndex];
-                        Rect surfaceTextureRect = uvReMappers[textureIndex];
-                        Mesh surfaceMesh = allFaces[i].mesh;
-                        Vector2[] atlasTexturePosition = new Vector2[surfaceMesh.uv.Length];
-                        Vector2[] atlasTextureSize = new Vector2[surfaceMesh.uv.Length];
-                        for (int j = 0; j < atlasTexturePosition.Length; j++)
-                        {
-                            atlasTexturePosition[j] = new Vector2(surfaceTextureRect.x + 0.0f, surfaceTextureRect.y + 0.0f);
-                            atlasTextureSize[j] = new Vector2(surfaceTextureRect.width - 0.0f, surfaceTextureRect.height - 0.0f);
-                        }
-                        surfaceMesh.uv2 = atlasTexturePosition;
-                        surfaceMesh.uv3 = atlasTextureSize;
-                    }
-                }
-                #endregion*/
                 #region Create Atlas & Remap UVs
                 AtlasMapper customAtlas = new AtlasMapper();
                 customAtlas.AddTextures(mapTextures.ToArray());
@@ -353,13 +336,17 @@ public class BSPMap
                         {
                             atlasTexturePosition[j] = new Vector2(surfaceTextureRect.x + 0.0f, surfaceTextureRect.y + 0.0f);
                             atlasTextureSize[j] = new Vector2(surfaceTextureRect.width - 0.0f, surfaceTextureRect.height - 0.0f);
+
+                            //yield return null;
                         }
                         surfaceMesh.uv2 = atlasTexturePosition;
                         surfaceMesh.uv3 = atlasTextureSize;
                     }
+
+                    //yield return null;
                 }
                 #endregion
-
+                Debug.Log("Created Atlas and Remapped UVs");
                 #region Calculate Minimum Submeshes Needed
                 List<List<int>> combinesIndices = new List<List<int>>();
                 combinesIndices.Add(new List<int>());
@@ -374,9 +361,11 @@ public class BSPMap
 
                     combinesIndices[combinesIndices.Count - 1].Add(i);
                     vertexCount += allFaces[i].mesh.vertices.Length;
+
+                    //yield return null;
                 }
                 #endregion
-
+                Debug.Log("Calculated Submeshes needed");
                 #region Combine Meshes to Submeshes
                 if (combinesIndices.Count == 1)
                 {
@@ -385,6 +374,8 @@ public class BSPMap
                     {
                         currentCombine[i].mesh = allFaces[combinesIndices[0][i]].mesh;
                         currentCombine[i].transform = mapGameObject.transform.localToWorldMatrix;
+
+                        //yield return null;
                     }
 
                     Mesh combinedMesh = new Mesh();
@@ -413,14 +404,16 @@ public class BSPMap
                         partialMeshes[i].AddComponent<MeshRenderer>().material = mapAtlas;
                         partialMeshes[i].AddComponent<MeshCollider>();
                         partialMeshes[i].transform.parent = mapGameObject.transform;
+
+                        //yield return null;
                     }
                 }
                 #endregion
-                #endregion
+                Debug.Log("Combined Meshes into Submeshes");
             }
         }
 
-        return mapGameObject;
+        //return mapGameObject;
     }
 
     /*private string PatchName(string original)
