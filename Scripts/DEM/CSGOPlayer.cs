@@ -4,6 +4,9 @@ using DemoInfo;
 
 public class CSGOPlayer : MonoBehaviour {
 
+    public long steamID;
+    public int entityID;
+
     public Transform headPosition, chestPosition, weaponRHPosition, weaponLHPosition;
     public Vector3 aimPosition = new Vector3(0f, 66f, 20f);
     //public Vector3 aimDifference;
@@ -19,6 +22,7 @@ public class CSGOPlayer : MonoBehaviour {
     public float movementDirection = 0;
     public string origWeaponString = "", weaponClass = "", weaponElement = "";
     public GameObject weapon;
+    
 
     private bool invisible;
 	
@@ -27,6 +31,8 @@ public class CSGOPlayer : MonoBehaviour {
         if (replay != null && playerInfo != null && replay.seekIndex > -1)
         {
             name = playerInfo.statsInTick[replay.seekIndex].name;
+            steamID = playerInfo.statsInTick[replay.seekIndex].steamID;
+            entityID = playerInfo.statsInTick[replay.seekIndex].entityID;
             if(animator == null) animator = GetComponent<Animator>();
 
             UpdateBodyTransforms();

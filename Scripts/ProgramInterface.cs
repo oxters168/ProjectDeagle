@@ -5,7 +5,7 @@ using DemoInfo;
 using System;
 using System.IO;
 using System.Linq;
-using Steamworks;
+//using Steamworks;
 
 public class ProgramInterface : MonoBehaviour {
 
@@ -129,13 +129,13 @@ public class ProgramInterface : MonoBehaviour {
 
     private void OnDestroy()
     {
-        if (GetComponent<SteamManager>() != null)
+        /*if (GetComponent<SteamManager>() != null)
         {
             if (SteamManager.Initialized)
             {
                 SteamAPI.Shutdown();
             }
-        }
+        }*/
     }
 
     /*public void LoadPlayerPrefs()

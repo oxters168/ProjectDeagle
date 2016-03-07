@@ -60,6 +60,7 @@ public class BSPMap
     {
         mapTextures = new List<Texture2D>();
         textureLocations = new List<string>();
+        bool usingPlainTextures = false;
 
         System.IO.FileStream mapFile = null;
         try
@@ -234,6 +235,7 @@ public class BSPMap
                         }
                         else
                         {
+                            usingPlainTextures = true;
                             faceTexture = Resources.Load<Texture2D>("Textures/Plain/" + currentFace.rawTexture);
                         }
 
@@ -312,10 +314,12 @@ public class BSPMap
             {
                 #region Create Atlas & Remap UVs
                 AtlasMapper customAtlas = new AtlasMapper();
+                if (usingPlainTextures) customAtlas.cushion = 0;
                 customAtlas.AddTextures(mapTextures.ToArray());
                 Texture2D packedMapTextures = customAtlas.atlas;
                 Rect[] uvReMappers = customAtlas.mappedUVs;
                 Material mapAtlas = new Material(Shader.Find("Custom/Atlas Tiling"));
+                if(usingPlainTextures) mapAtlas.SetFloat("_uv1FracOffset", 0.07f);
                 mapAtlas.mainTextureScale = new Vector2(1f, 1f);
                 mapAtlas.mainTexture = packedMapTextures;
                 //mapAtlas.mainTexture.wrapMode = TextureWrapMode.Clamp;

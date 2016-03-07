@@ -5,7 +5,7 @@
       _MainTex ("Main Texture", 2D) = "white" {}
 	  _BlendTex ("Blend Texture", 2D) = "white" {}
 	  _NormalTex ("Normal Texture", 2D) = "white" {}
-	  _uv1FracOffset ("Frac Offset", Float) = 0
+	  _uv1FracOffset ("Frac Offset", Float) = 0 //0.07
 	  _uv1Offset ("UV1 Offset", Float) = 0
 	  _uv2Offset ("UV2 Offset", Float) = 0
 	  _uv3Offset ("UV3 Offset", Float) = 0

@@ -13,6 +13,8 @@ public class CameraControl : MonoBehaviour {
     private Vector3 previousMouse = Vector3.zero;
     private int firstTouch = -1, secondTouch = -1;
     private float fingerDistance = 0;
+    public float movementDeadZone = 1f, zoomDeadZone = 1f;
+    private bool moved = false, zoomed = false;
 
     public Color leftColor = Color.green, rightColor = Color.green, upColor = Color.green, downColor = Color.green;
     public float crosshairLength = 15f, crosshairGap = 3f, crosshairThickness = 2f;
@@ -39,11 +41,16 @@ public class CameraControl : MonoBehaviour {
                     firstTouch = Input.touches[0].fingerId;
                     secondTouch = Input.touches[1].fingerId;
                     fingerDistance = (firstPosition - secondPosition).magnitude;
+                    zoomed = false;
                 }
                 else
                 {
-                    scroll += (firstPosition - secondPosition).magnitude - fingerDistance;
-                    fingerDistance = (firstPosition - secondPosition).magnitude;
+                    if (zoomed || (firstPosition - secondPosition).magnitude - fingerDistance > zoomDeadZone)
+                    {
+                        scroll += (firstPosition - secondPosition).magnitude - fingerDistance;
+                        fingerDistance = (firstPosition - secondPosition).magnitude;
+                        zoomed = true;
+                    }
                 }
             }
             else if (Input.touches.Length >= 1)
@@ -52,12 +59,17 @@ public class CameraControl : MonoBehaviour {
                 {
                     firstTouch = Input.touches[0].fingerId;
                     previousMouse = new Vector3(Input.touches[0].position.x, Input.touches[0].position.y, 0);
+                    moved = false;
                 }
                 if (firstTouch > -1)
                 {
-                    horizontal = Input.touches[0].position.x - previousMouse.x;
-                    vertical = previousMouse.y - Input.touches[0].position.y;
-                    previousMouse = new Vector3(Input.touches[0].position.x, Input.touches[0].position.y, 0);
+                    if (moved || Mathf.Abs(Input.touches[0].position.x - previousMouse.x) > movementDeadZone || Mathf.Abs(Input.touches[0].position.y - previousMouse.y) > movementDeadZone)
+                    {
+                        horizontal = Input.touches[0].position.x - previousMouse.x;
+                        vertical = previousMouse.y - Input.touches[0].position.y;
+                        previousMouse = new Vector3(Input.touches[0].position.x, Input.touches[0].position.y, 0);
+                        moved = true;
+                    }
                 }
             }
             else { firstTouch = -1; secondTouch = -1; }
