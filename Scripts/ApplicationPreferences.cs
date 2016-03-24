@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+//using System.Collections;
 
 public class ApplicationPreferences {
 
@@ -10,7 +10,8 @@ public class ApplicationPreferences {
     public static int maxSizeAllowed = 128;
     public static string mapsDir = "D:/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/maps/";
     public static string texturesDir = "D:/CSGOModels/Textures/";
-    public static Color ctColor = new Color(0, 0, 1), tColor = new Color(1, 0, 0);
+    public static Material playerMaterial = Resources.Load<Material>("Materials/PlayerMaterial"), mapMaterial = Resources.Load<Material>("Materials/MapMaterial"), mapAtlasMaterial = Resources.Load<Material>("Materials/MapAtlasMaterial");
+    public static Color ctColor = new Color(0.263f, 0.369f, 0.486f), tColor = new Color(0.953f, 0.702f, 0.286f);
 
     public static void LoadSavedPreferences()
     {

@@ -1,13 +1,14 @@
 ﻿using UnityEngine;
-using System.Collections;
+//using System.Collections;
 using DemoInfo;
+using RootMotion.FinalIK;
 
 public class CSGOPlayer : MonoBehaviour {
 
     public long steamID;
     public int entityID;
 
-    public Transform headPosition, chestPosition, weaponRHPosition, weaponLHPosition;
+    public Transform chestPosition, weaponRHPosition, weaponLHPosition;
     public Vector3 aimPosition = new Vector3(0f, 66f, 20f);
     //public Vector3 aimDifference;
     //public bool headAimSet = false;
@@ -17,13 +18,14 @@ public class CSGOPlayer : MonoBehaviour {
     public int currentTeam = -1;
     public Vector2 rawDirection = Vector2.zero;
     public float maxAimX = 5f, maxAimY = 15f;
+    private AimIK aimIK;
     public Vector2 aimDirection = Vector2.zero;
+    public Vector3 aimForward = Vector3.zero;
     public Vector3 horizontalVelocity = Vector3.zero, verticalVelocity = Vector3.zero;
     public float movementDirection = 0;
     public string origWeaponString = "", weaponClass = "", weaponElement = "";
-    public GameObject weapon;
+    public GameObject weapon, aimIKTarget;
     
-
     private bool invisible;
 	
 	void FixedUpdate ()
@@ -34,10 +36,14 @@ public class CSGOPlayer : MonoBehaviour {
             steamID = playerInfo.statsInTick[replay.seekIndex].steamID;
             entityID = playerInfo.statsInTick[replay.seekIndex].entityID;
             if(animator == null) animator = GetComponent<Animator>();
+            AddAimIK();
+
 
             UpdateBodyTransforms();
 
             UpdateWeapon();
+
+            ConfigureAimIK();
 
             UpdateAim();
 
@@ -54,27 +60,33 @@ public class CSGOPlayer : MonoBehaviour {
         }
 	}
 
+    void OnDestroy()
+    {
+        DestroyImmediate(aimIKTarget);
+    }
+
     private void DrawDebugStuff()
     {
         if (playerInfo.statsInTick[replay.seekIndex].isAlive)
         {
-            Debug.DrawRay(transform.position + (Vector3.up * 10f), horizontalVelocity, Color.blue);
-            Debug.DrawRay(transform.position + (transform.forward * aimPosition.z) + (transform.up * aimPosition.y), transform.forward * 1000f, Color.green);
+            Debug.DrawRay(transform.position + (Vector3.up * 10f), horizontalVelocity, Color.blue); //Movement Direction
+            Debug.DrawRay(transform.position + (transform.forward * aimPosition.z) + (transform.up * aimPosition.y), aimForward * 1000f, Color.green); //Aim Direction
         }
     }
     private void UpdateBodyTransforms()
     {
         if (animator != null)
         {
-            if (headPosition == null)
-            {
-                headPosition = animator.GetBoneTransform(HumanBodyBones.Head).FindChild("CamPosition");
-            }
+            //if (headPosition == null)
+            //{
+            //    headPosition = animator.GetBoneTransform(HumanBodyBones.Head).FindChild("CamPosition");
+            //}
             if(chestPosition == null) chestPosition = animator.GetBoneTransform(HumanBodyBones.Chest);
             if (weaponRHPosition == null)
             {
                 weaponRHPosition = animator.GetBoneTransform(HumanBodyBones.RightHand);
                 if (weaponRHPosition != null && weaponRHPosition.FindChild("weapon_hand_R") != null) weaponRHPosition = weaponRHPosition.FindChild("weapon_hand_R");
+                Debug.Log("Right Hand of " + name + " is " + weaponRHPosition.name);
             }
         }
 
@@ -93,6 +105,9 @@ public class CSGOPlayer : MonoBehaviour {
         while (aimY < 0) aimY = 360 - aimY;
         while (aimY > 360) aimY -= 360;
         aimDirection = new Vector2(aimX, aimY);
+        aimForward = Quaternion.Euler(aimDirection.y - 90f, aimDirection.x, 0) * Vector3.forward;
+        
+        if (aimIKTarget != null) aimIKTarget.transform.position = transform.position + (transform.forward * aimPosition.z) + (transform.up * aimPosition.y) + (aimForward * 100);
     }
     private void UpdateTransform()
     {
@@ -127,15 +142,36 @@ public class CSGOPlayer : MonoBehaviour {
             GameObject prefabWeapon = FindWeapon(playerInfo.statsInTick[replay.seekIndex].teamID, replay.demoTicks[replay.seekIndex].ctID, replay.demoTicks[replay.seekIndex].tID, playerInfo.statsInTick[replay.seekIndex].activeWeapon.equipmentClass, playerInfo.statsInTick[replay.seekIndex].activeWeapon.weapon);
             if (weaponRHPosition != null && prefabWeapon != null)
             {
-                weapon = GameObject.Instantiate(prefabWeapon) as GameObject;
+                weapon = Instantiate(prefabWeapon) as GameObject;
                 
                 if (weapon != null)
                 {
-                    weapon.transform.parent = weaponRHPosition;
-                    //weapon.transform.localPosition = new Vector3(0.02f, 0, -0.04f);
-                    weapon.transform.localPosition = new Vector3(-3.8f, -0.82f, 0);
-                    //weapon.transform.localRotation = Quaternion.Euler(350, 280, 270);
-                    weapon.transform.localRotation = Quaternion.Euler(15, 270, 90);
+                    if (weapon.transform.parent != weaponRHPosition)
+                    {
+                        Transform weaponHandPlacement = FindChildIn(weapon.transform, "weapon_hand_R", System.StringComparison.InvariantCultureIgnoreCase);
+                        if (weaponHandPlacement != null)
+                        {
+                            Transform handPlacementParent = weaponHandPlacement.parent;
+
+                            weaponHandPlacement.parent = weaponRHPosition;
+                            weapon.transform.parent = weaponHandPlacement;
+
+                            //weapon.transform.localPosition = Vector3.zero;
+                            //weapon.transform.localRotation = Quaternion.Euler(Vector3.zero);
+
+                            weaponHandPlacement.localPosition = Vector3.zero;
+                            weaponHandPlacement.localRotation = Quaternion.Euler(Vector3.zero);
+                            
+                            weapon.transform.parent = weaponRHPosition;
+                            weaponHandPlacement.parent = handPlacementParent;
+                        }
+                        else
+                        {
+                            weapon.transform.parent = weaponRHPosition;
+                            weapon.transform.localPosition = Vector3.zero;
+                            weapon.transform.rotation = Quaternion.Euler(Vector3.zero);
+                        }
+                    }
                 }
             }
         }
@@ -164,6 +200,9 @@ public class CSGOPlayer : MonoBehaviour {
     {
         if (animator != null)
         {
+            if (replay.play && animator.speed != 1) animator.speed = 1;
+            else if (!replay.play && animator.speed != 0) animator.speed = 0;
+
             animator.SetFloat("MovementDirection", movementDirection);
 
             if (horizontalVelocity.magnitude > 0) animator.SetBool("Walk", true);
@@ -176,9 +215,9 @@ public class CSGOPlayer : MonoBehaviour {
             else animator.SetBool("Jump", false);
 
             animator.SetBool("Crouch", playerInfo.statsInTick[replay.seekIndex].isDucking);
-            if(playerInfo.statsInTick[replay.seekIndex].activeWeapon != null) animator.SetInteger("EquipmentClass", (int) playerInfo.statsInTick[replay.seekIndex].activeWeapon.equipmentClass);
+            //if(playerInfo.statsInTick[replay.seekIndex].activeWeapon != null) animator.SetInteger("EquipmentClass", (int) playerInfo.statsInTick[replay.seekIndex].activeWeapon.equipmentClass);
             //animator.SetFloat("AimX", (aimDirection.x - transform.rotation.eulerAngles.y) / maxAimX);
-            animator.SetFloat("AimY", (90f - aimDirection.y) / maxAimY);
+            //animator.SetFloat("AimY", (90f - aimDirection.y) / maxAimY);
         }
     }
     private void UpdateVisibility()
@@ -197,7 +236,7 @@ public class CSGOPlayer : MonoBehaviour {
         if (currentTeam != playerInfo.statsInTick[replay.seekIndex].teamID)
         {
             GameObject newAppearance = null;
-            Material teamMaterial = new Material(Shader.Find("Standard"));
+            Material teamMaterial = new Material(ApplicationPreferences.playerMaterial);
             //currentTeam = playerInfo.statsInTick[replay.seekIndex].teamID;
             if (playerInfo.statsInTick[replay.seekIndex].teamID == replay.demoTicks[replay.seekIndex].ctID)
             {
@@ -207,7 +246,7 @@ public class CSGOPlayer : MonoBehaviour {
                 teamMaterial.color = ApplicationPreferences.ctColor;
                 Renderer facelessRenderer = newAppearance.GetComponentInChildren<Renderer>();
                 if (facelessRenderer != null) facelessRenderer.material = teamMaterial;
-                newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CSGOHumanoidController");
+                newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CustomHumanoidController");
                 newAppearance.GetComponent<Animator>().applyRootMotion = false;
             }
             else if (playerInfo.statsInTick[replay.seekIndex].teamID == replay.demoTicks[replay.seekIndex].tID)
@@ -218,7 +257,7 @@ public class CSGOPlayer : MonoBehaviour {
                 teamMaterial.color = ApplicationPreferences.tColor;
                 Renderer facelessRenderer = newAppearance.GetComponentInChildren<Renderer>();
                 if (facelessRenderer != null) facelessRenderer.material = teamMaterial;
-                newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CSGOHumanoidController");
+                newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CustomHumanoidController");
                 newAppearance.GetComponent<Animator>().applyRootMotion = false;
             }
             if (newAppearance != null)
@@ -236,6 +275,48 @@ public class CSGOPlayer : MonoBehaviour {
         }
     }
 
+    private void AddAimIK()
+    {
+        if(aimIK == null)
+        {
+            if(animator != null)
+            {
+                aimIK = gameObject.AddComponent<AimIK>();
+                Debug.Log("Added aim IK to " + name);
+                aimIK.solver.poleAxis = Vector3.right;
+                aimIK.solver.poleWeight = 1;
+
+                //aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightShoulder));
+                aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightUpperArm));
+                aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightLowerArm));
+                aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightHand));
+
+                if(aimIK.solver.bones.Length > 0) aimIK.solver.bones[0].weight = 0;
+
+                aimIKTarget = new GameObject(name + " AimIK");
+                aimIK.solver.target = aimIKTarget.transform;
+            }
+        }
+    }
+    private void ConfigureAimIK()
+    {
+        if (aimIK != null)
+        {
+            if (weapon != null)
+            {
+                Transform aim = FindChildIn(weapon.transform, "Aim", System.StringComparison.InvariantCultureIgnoreCase);
+                Transform pole = FindChildIn(weapon.transform, "Pole", System.StringComparison.InvariantCultureIgnoreCase);
+
+                if (aim != null) aimIK.solver.transform = aim;
+                if (pole != null) aimIK.solver.poleTarget = pole;
+            }
+            else
+            {
+                aimIK.solver.IKPositionWeight = 0;
+            }
+        }
+    }
+
     public T FindComponentIn<T>(GameObject go)
     {
         T theComponent = default(T);
@@ -249,6 +330,20 @@ public class CSGOPlayer : MonoBehaviour {
             }
         }
         return theComponent;
+    }
+    public static Transform FindChildIn(Transform t, string searchName, System.StringComparison comparisonType)
+    {
+        if (t.name.Equals(searchName, comparisonType)) return t;
+
+        foreach(Transform child in t)
+        {
+            Transform deeper = null;
+            if (child.name.Equals(searchName, comparisonType)) return child;
+            else deeper = FindChildIn(child, searchName, comparisonType);
+            if (deeper != null) return deeper;
+        }
+
+        return null;
     }
 
     public void Hide(bool hide)
@@ -277,59 +372,94 @@ public class CSGOPlayer : MonoBehaviour {
 
     public static GameObject FindWeapon(int teamID, int ctID, int tID, EquipmentClass weaponClass, EquipmentElement weaponElement)
     {
-        string weaponsLocation = "Models/csgo/weapons/";
+        string weaponsLocation = "Prefabs/CSGOWorldModels/", weaponFileName = ModelFileName(teamID, ctID, tID, weaponElement);
+        GameObject loadedModel = null;
 
-        if (weaponElement == EquipmentElement.AK47) return Resources.Load<GameObject>(weaponsLocation + "v_rif_ak47");
-        if (weaponElement == EquipmentElement.AUG) return Resources.Load<GameObject>(weaponsLocation + "v_rif_aug");
-        if (weaponElement == EquipmentElement.AWP) return Resources.Load<GameObject>(weaponsLocation + "v_snip_awp");
-        if (weaponElement == EquipmentElement.Bizon) return Resources.Load<GameObject>(weaponsLocation + "v_smg_bizon");
-        if (weaponElement == EquipmentElement.Bomb) return Resources.Load<GameObject>(weaponsLocation + "v_ied");
-        if (weaponElement == EquipmentElement.CZ) return Resources.Load<GameObject>(weaponsLocation + "v_pist_cz_75");
-        if (weaponElement == EquipmentElement.Deagle) return Resources.Load<GameObject>(weaponsLocation + "v_pist_deagle");
-        if (weaponElement == EquipmentElement.Decoy) return Resources.Load<GameObject>(weaponsLocation + "v_eq_decoy");
+        if (weaponFileName != null) loadedModel = Resources.Load<GameObject>(weaponsLocation + "w_" + weaponFileName);
+        if (loadedModel != null) return loadedModel;
+
+        #region Defaults
+        if(weaponClass == EquipmentClass.Pistol)
+        {
+            return Resources.Load<GameObject>(weaponsLocation + "w_" + ModelFileName(teamID, ctID, tID, EquipmentElement.USP));
+        }
+        else if(weaponClass == EquipmentClass.SMG)
+        {
+            return Resources.Load<GameObject>(weaponsLocation + "w_" + ModelFileName(teamID, ctID, tID, EquipmentElement.P90));
+        }
+        else if (weaponClass == EquipmentClass.Rifle)
+        {
+            return Resources.Load<GameObject>(weaponsLocation + "w_" + ModelFileName(teamID, ctID, tID, EquipmentElement.M4A1));
+        }
+        else if (weaponClass == EquipmentClass.Heavy)
+        {
+            return Resources.Load<GameObject>(weaponsLocation + "w_" + ModelFileName(teamID, ctID, tID, EquipmentElement.Negev));
+        }
+        else if (weaponClass == EquipmentClass.Grenade)
+        {
+            return Resources.Load<GameObject>(weaponsLocation + "w_" + ModelFileName(teamID, ctID, tID, EquipmentElement.HE));
+        }
+        else if (weaponClass == EquipmentClass.Equipment || weaponClass == EquipmentClass.Unknown)
+        {
+            return Resources.Load<GameObject>(weaponsLocation + "w_" + ModelFileName(teamID, ctID, tID, EquipmentElement.Knife));
+        }
+        #endregion
+
+        return null;
+    }
+    public static string ModelFileName(int teamID, int ctID, int tID, EquipmentElement weaponElement)
+    {
+        if (weaponElement == EquipmentElement.AK47) return "rif_ak47";
+        if (weaponElement == EquipmentElement.AUG) return "rif_aug";
+        if (weaponElement == EquipmentElement.AWP) return "snip_awp";
+        if (weaponElement == EquipmentElement.Bizon) return "smg_bizon";
+        if (weaponElement == EquipmentElement.Bomb) return "ied";
+        if (weaponElement == EquipmentElement.CZ) return "pist_cz_75";
+        if (weaponElement == EquipmentElement.Deagle) return "pist_deagle";
+        if (weaponElement == EquipmentElement.Decoy) return "eq_decoy";
         //if (weaponElement == EquipmentElement.DefuseKit) ;
-        if (weaponElement == EquipmentElement.DualBarettas) return Resources.Load<GameObject>(weaponsLocation + "v_pist_elite");
-        if (weaponElement == EquipmentElement.Famas) return Resources.Load<GameObject>(weaponsLocation + "v_rif_famas");
-        if (weaponElement == EquipmentElement.FiveSeven) return Resources.Load<GameObject>(weaponsLocation + "v_pist_fiveseven");
-        if (weaponElement == EquipmentElement.Flash) return Resources.Load<GameObject>(weaponsLocation + "v_eq_flashbang");
-        if (weaponElement == EquipmentElement.G3SG1) return Resources.Load<GameObject>(weaponsLocation + "v_snip_g3sg1");
-        if (weaponElement == EquipmentElement.Gallil) return Resources.Load<GameObject>(weaponsLocation + "v_rif_galilar");
-        if (weaponElement == EquipmentElement.Glock) return Resources.Load<GameObject>(weaponsLocation + "v_pist_glock18");
-        if (weaponElement == EquipmentElement.HE) return Resources.Load<GameObject>(weaponsLocation + "v_eq_fraggrenade");
+        if (weaponElement == EquipmentElement.DualBarettas) return "pist_elite";
+        if (weaponElement == EquipmentElement.Famas) return "rif_famas";
+        if (weaponElement == EquipmentElement.FiveSeven) return "pist_fiveseven";
+        if (weaponElement == EquipmentElement.Flash) return "eq_flashbang";
+        if (weaponElement == EquipmentElement.G3SG1) return "snip_g3sg1";
+        if (weaponElement == EquipmentElement.Gallil) return "rif_galilar";
+        if (weaponElement == EquipmentElement.Glock) return "pist_glock18";
+        if (weaponElement == EquipmentElement.HE) return "eq_fraggrenade";
         //if (weaponElement == EquipmentElement.Helmet) ;
-        if (weaponElement == EquipmentElement.Incendiary) return Resources.Load<GameObject>(weaponsLocation + "v_eq_incendiarygrenade");
+        if (weaponElement == EquipmentElement.Incendiary) return "eq_incendiarygrenade";
         //if (weaponElement == EquipmentElement.Kevlar) ;
         if (weaponElement == EquipmentElement.Knife)
         {
-            if (teamID == ctID) return Resources.Load<GameObject>(weaponsLocation + "v_knife_default_ct");
-            if (teamID == tID) return Resources.Load<GameObject>(weaponsLocation + "v_knife_default_t");
+            if (teamID == ctID) return "knife_default_ct";
+            if (teamID == tID) return "knife_default_t";
         }
-        if (weaponElement == EquipmentElement.M249) return Resources.Load<GameObject>(weaponsLocation + "v_mach_m249para");
-        if (weaponElement == EquipmentElement.M4A1) return Resources.Load<GameObject>(weaponsLocation + "v_rif_m4a1_s");
-        if (weaponElement == EquipmentElement.M4A4) return Resources.Load<GameObject>(weaponsLocation + "v_rif_m4a1");
-        if (weaponElement == EquipmentElement.Mac10) return Resources.Load<GameObject>(weaponsLocation + "v_smg_mac10");
-        if (weaponElement == EquipmentElement.Molotov) return Resources.Load<GameObject>(weaponsLocation + "v_eq_molotov");
-        if (weaponElement == EquipmentElement.MP7) return Resources.Load<GameObject>(weaponsLocation + "v_smg_mp7");
-        if (weaponElement == EquipmentElement.MP9) return Resources.Load<GameObject>(weaponsLocation + "v_smg_mp9");
-        if (weaponElement == EquipmentElement.Negev) return Resources.Load<GameObject>(weaponsLocation + "v_mach_negev");
-        if (weaponElement == EquipmentElement.Nova) return Resources.Load<GameObject>(weaponsLocation + "v_shot_nova");
-        if (weaponElement == EquipmentElement.P2000) return Resources.Load<GameObject>(weaponsLocation + "v_pist_hkp2000");
-        if (weaponElement == EquipmentElement.P250) return Resources.Load<GameObject>(weaponsLocation + "v_pist_p250");
-        if (weaponElement == EquipmentElement.P90) return Resources.Load<GameObject>(weaponsLocation + "v_smg_p90");
-        if (weaponElement == EquipmentElement.SawedOff) return Resources.Load<GameObject>(weaponsLocation + "v_shot_sawedoff");
-        if (weaponElement == EquipmentElement.Scar20) return Resources.Load<GameObject>(weaponsLocation + "v_snip_scar20");
-        if (weaponElement == EquipmentElement.Scout) return Resources.Load<GameObject>(weaponsLocation + "v_snip_ssg08");
-        if (weaponElement == EquipmentElement.SG556) return Resources.Load<GameObject>(weaponsLocation + "v_rif_sg556");
-        if (weaponElement == EquipmentElement.Smoke) return Resources.Load<GameObject>(weaponsLocation + "v_eq_smokegrenade");
-        if (weaponElement == EquipmentElement.Swag7) return Resources.Load<GameObject>(weaponsLocation + "v_shot_mag7");
-        if (weaponElement == EquipmentElement.Tec9) return Resources.Load<GameObject>(weaponsLocation + "v_pist_tec9");
-        if (weaponElement == EquipmentElement.UMP) return Resources.Load<GameObject>(weaponsLocation + "v_smg_ump45");
+        if (weaponElement == EquipmentElement.M249) return "mach_m249para";
+        if (weaponElement == EquipmentElement.M4A1) return "rif_m4a1_s";
+        if (weaponElement == EquipmentElement.M4A4) return "rif_m4a1";
+        if (weaponElement == EquipmentElement.Mac10) return "smg_mac10";
+        if (weaponElement == EquipmentElement.Molotov) return "eq_molotov";
+        if (weaponElement == EquipmentElement.MP7) return "smg_mp7";
+        if (weaponElement == EquipmentElement.MP9) return "smg_mp9";
+        if (weaponElement == EquipmentElement.Negev) return "mach_negev";
+        if (weaponElement == EquipmentElement.Nova) return "shot_nova";
+        if (weaponElement == EquipmentElement.P2000) return "pist_hkp2000";
+        if (weaponElement == EquipmentElement.P250) return "pist_p250";
+        if (weaponElement == EquipmentElement.P90) return "smg_p90";
+        if (weaponElement == EquipmentElement.SawedOff) return "shot_sawedoff";
+        if (weaponElement == EquipmentElement.Scar20) return "snip_scar20";
+        if (weaponElement == EquipmentElement.Scout) return "snip_ssg08";
+        if (weaponElement == EquipmentElement.SG556) return "rif_sg556";
+        if (weaponElement == EquipmentElement.Smoke) return "eq_smokegrenade";
+        if (weaponElement == EquipmentElement.Swag7) return "shot_mag7";
+        if (weaponElement == EquipmentElement.Tec9) return "pist_tec9";
+        if (weaponElement == EquipmentElement.UMP) return "smg_ump45";
         //if (weaponElement == EquipmentElement.Unknown) ;
-        if (weaponElement == EquipmentElement.USP) return Resources.Load<GameObject>(weaponsLocation + "v_pist_223");
-        //if (weaponElement == EquipmentElement.World) return Resources.Load<GameObject>(weaponsLocation + "v_knife_default_ct");
-        if (weaponElement == EquipmentElement.XM1014) return Resources.Load<GameObject>(weaponsLocation + "v_shot_xm1014");
-        if (weaponElement == EquipmentElement.Zeus) return Resources.Load<GameObject>(weaponsLocation + "v_eq_taser");
-        
+        if (weaponElement == EquipmentElement.USP) return "pist_223";
+        //if (weaponElement == EquipmentElement.World) return Resources.Load<GameObject>(weaponsLocation + "knife_default_ct");
+        if (weaponElement == EquipmentElement.XM1014) return "shot_xm1014";
+        if (weaponElement == EquipmentElement.Zeus) return "eq_taser";
+
         return null;
     }
 }

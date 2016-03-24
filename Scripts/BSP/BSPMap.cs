@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+//using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
@@ -31,8 +31,8 @@ public class BSPMap
 
     //private dbrush_t[] brushes;
     //private dbrushside_t[] brushSides;
-    //private ddispinfo_t[] dispInfo;
-    //private dDispVert[] dispVerts;
+    private ddispinfo_t[] dispInfo;
+    private dDispVert[] dispVerts;
 
     private texinfo_t[] texInfo;
     private dtexdata_t[] texData;
@@ -88,8 +88,8 @@ public class BSPMap
 
             //brushes = bsp.GetBrushes();
             //brushSides = bsp.GetBrushSides();
-            //dispInfo = bsp.GetDispInfo();
-            //dispVerts = bsp.GetDispVerts();
+            dispInfo = bsp.GetDispInfo();
+            dispVerts = bsp.GetDispVerts();
 
             texInfo = bsp.GetTextureInfo();
             texData = bsp.GetTextureData();
@@ -296,7 +296,7 @@ public class BSPMap
                     }
                     if (faceTexture != null)
                     {
-                        faceMaterial = new Material(Shader.Find("Legacy Shaders/Diffuse"));
+                        faceMaterial = new Material(ApplicationPreferences.mapMaterial);
                         faceMaterial.mainTextureScale = new Vector2(1, 1);
                         faceMaterial.mainTextureOffset = new Vector2(0, 0);
                         faceMaterial.mainTexture = faceTexture;
@@ -318,7 +318,7 @@ public class BSPMap
                 customAtlas.AddTextures(mapTextures.ToArray());
                 Texture2D packedMapTextures = customAtlas.atlas;
                 Rect[] uvReMappers = customAtlas.mappedUVs;
-                Material mapAtlas = new Material(Shader.Find("Custom/Atlas Tiling"));
+                Material mapAtlas = new Material(ApplicationPreferences.mapAtlasMaterial);
                 if(usingPlainTextures) mapAtlas.SetFloat("_uv1FracOffset", 0.07f);
                 mapAtlas.mainTextureScale = new Vector2(1f, 1f);
                 mapAtlas.mainTexture = packedMapTextures;
@@ -416,8 +416,44 @@ public class BSPMap
                 Debug.Log("Combined Meshes into Submeshes");
             }
         }
+        else
+        {
+            mapGameObject = Object.Instantiate(Resources.Load("Models/CSGOMaps/" + mapName)) as GameObject;
+        }
 
-        //return mapGameObject;
+        //SaveUVValues("C:\\Users\\oxter\\Documents\\" + mapName + "_UV.txt");
+    }
+    public void SaveUVValues(string location)
+    {
+        List<string> lines = new List<string>();
+        foreach(Transform submesh in mapGameObject.transform)
+        {
+            lines.Add(submesh.name);
+            MeshFilter meshFilter = submesh.GetComponent<MeshFilter>();
+            if (meshFilter != null && meshFilter.mesh != null)
+            {
+                if(meshFilter.mesh.uv != null && meshFilter.mesh.uv.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv));
+                if (meshFilter.mesh.uv2 != null && meshFilter.mesh.uv2.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv2));
+                if (meshFilter.mesh.uv3 != null && meshFilter.mesh.uv3.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv3));
+                if (meshFilter.mesh.uv4 != null && meshFilter.mesh.uv4.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv4));
+            }
+            else lines.Add("None");
+        }
+
+        try
+        {
+            File.WriteAllLines(@location, lines.ToArray());
+        }
+        catch (System.Exception e) { Debug.Log(e.Message); }
+    }
+    private string MakeUVString(Vector2[] uvs)
+    {
+        string uvLine = "";
+        foreach (Vector2 uv in uvs)
+        {
+            uvLine += "(" + uv.x + "," + uv.y + ") ";
+        }
+        return uvLine;
     }
 
     /*private string PatchName(string original)
@@ -600,6 +636,30 @@ public class BSPMap
         }
         #endregion
 
+        #region Apply Displacement
+        if (face.dispinfo > -1)
+        {
+            ddispinfo_t disp = dispInfo[face.dispinfo];
+            int power = Mathf.RoundToInt(Mathf.Pow(2, disp.power));
+            int dispVertIndex = disp.DispVertStart;
+            //Vector3 direction = dispInfo[face.dispinfo].startPosition.normalized;
+            //int surfaceVerticesIndex = surfaceVertices.IndexOf(disp.startPosition);
+            //int numberOfVertices = surfaceVertices.Count;
+
+
+            for (int i = 0; i < surfaceVertices.Count; i++)
+            {
+                Vector3 direction = dispVerts[dispVertIndex].vec;
+
+                Vector3 displaced = surfaceVertices[i] + direction * dispVerts[dispVertIndex].dist;
+
+                //surfaceVertices[i] = displaced;
+
+                dispVertIndex++;
+            }
+        }
+        #endregion
+
         #region Get UV Points
         Vector3 s = Vector3.zero, t = Vector3.zero;
         float xOffset = 0, yOffset = 0;
@@ -631,6 +691,7 @@ public class BSPMap
         mesh.vertices = surfaceVertices.ToArray();
         mesh.triangles = triangleIndices.ToArray();
         mesh.uv = uvPoints;
+        mesh.RecalculateNormals();
         #endregion
 
         return mesh;

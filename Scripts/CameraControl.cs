@@ -137,6 +137,7 @@ public class CameraControl : MonoBehaviour {
                     //Quaternion steadyRotation = Quaternion.Euler(targetPlayer.headPosition.eulerAngles.x, targetPlayer.headPosition.eulerAngles.y, 0);
 
                     Camera.main.transform.position = targetPlayer.transform.position + (targetPlayer.transform.forward * targetPlayer.aimPosition.z) + (targetPlayer.transform.up * targetPlayer.aimPosition.y);
+                    //Camera.main.transform.position = targetPlayer.transform.position + targetPlayer.aimPosition;
                     Camera.main.transform.rotation = Quaternion.Euler(targetPlayer.aimDirection.y - 90f, targetPlayer.aimDirection.x, 0);
                 }
                 else
