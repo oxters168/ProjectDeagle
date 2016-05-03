@@ -24,7 +24,7 @@ public class CSGOPlayer : MonoBehaviour {
     public Vector3 horizontalVelocity = Vector3.zero, verticalVelocity = Vector3.zero;
     public float movementDirection = 0;
     public string origWeaponString = "", weaponClass = "", weaponElement = "";
-    public GameObject weapon, aimIKTarget;
+    public GameObject weapon, aimIKTarget, aimIKPole;
     
     private bool invisible;
 	
@@ -63,6 +63,7 @@ public class CSGOPlayer : MonoBehaviour {
     void OnDestroy()
     {
         DestroyImmediate(aimIKTarget);
+        DestroyImmediate(aimIKPole);
     }
 
     private void DrawDebugStuff()
@@ -86,7 +87,6 @@ public class CSGOPlayer : MonoBehaviour {
             {
                 weaponRHPosition = animator.GetBoneTransform(HumanBodyBones.RightHand);
                 if (weaponRHPosition != null && weaponRHPosition.FindChild("weapon_hand_R") != null) weaponRHPosition = weaponRHPosition.FindChild("weapon_hand_R");
-                Debug.Log("Right Hand of " + name + " is " + weaponRHPosition.name);
             }
         }
 
@@ -282,7 +282,6 @@ public class CSGOPlayer : MonoBehaviour {
             if(animator != null)
             {
                 aimIK = gameObject.AddComponent<AimIK>();
-                Debug.Log("Added aim IK to " + name);
                 aimIK.solver.poleAxis = Vector3.right;
                 aimIK.solver.poleWeight = 1;
 
@@ -293,8 +292,10 @@ public class CSGOPlayer : MonoBehaviour {
 
                 if(aimIK.solver.bones.Length > 0) aimIK.solver.bones[0].weight = 0;
 
-                aimIKTarget = new GameObject(name + " AimIK");
+                aimIKTarget = new GameObject(name + " AimIKTarget");
                 aimIK.solver.target = aimIKTarget.transform;
+                aimIKPole = new GameObject(name + " AimIKPole");
+                aimIK.solver.poleTarget = aimIKPole.transform;
             }
         }
     }
@@ -304,11 +305,16 @@ public class CSGOPlayer : MonoBehaviour {
         {
             if (weapon != null)
             {
+                aimIK.solver.IKPositionWeight = 1;
+
                 Transform aim = FindChildIn(weapon.transform, "Aim", System.StringComparison.InvariantCultureIgnoreCase);
-                Transform pole = FindChildIn(weapon.transform, "Pole", System.StringComparison.InvariantCultureIgnoreCase);
+                //Transform pole = FindChildIn(weapon.transform, "Pole", System.StringComparison.InvariantCultureIgnoreCase);
+
+                //pole.position = aim.position + (transform.right * -25f);
+                aimIKPole.transform.position = aim.position + (transform.right * 25f);
 
                 if (aim != null) aimIK.solver.transform = aim;
-                if (pole != null) aimIK.solver.poleTarget = pole;
+                //if (pole != null) aimIK.solver.poleTarget = pole;
             }
             else
             {
@@ -372,7 +378,7 @@ public class CSGOPlayer : MonoBehaviour {
 
     public static GameObject FindWeapon(int teamID, int ctID, int tID, EquipmentClass weaponClass, EquipmentElement weaponElement)
     {
-        string weaponsLocation = "Prefabs/CSGOWorldModels/", weaponFileName = ModelFileName(teamID, ctID, tID, weaponElement);
+        string weaponsLocation = "Prefabs/CSGOWorldModels/weapons/", weaponFileName = ModelFileName(teamID, ctID, tID, weaponElement);
         GameObject loadedModel = null;
 
         if (weaponFileName != null) loadedModel = Resources.Load<GameObject>(weaponsLocation + "w_" + weaponFileName);

@@ -65,6 +65,7 @@ public class BSPMap
         System.IO.FileStream mapFile = null;
         try
         {
+            Debug.Log(mapLocation + mapName + ".bsp");
             if (mapLocation.Length > 0 && System.IO.File.Exists(mapLocation + mapName + ".bsp")) mapFile = new System.IO.FileStream(mapLocation + mapName + ".bsp", System.IO.FileMode.Open);
             else if (System.IO.File.Exists("Assets\\Resources\\Maps\\" + mapName + ".bsp")) mapFile = new System.IO.FileStream("Assets\\Resources\\Maps\\" + mapName + ".bsp", System.IO.FileMode.Open);
         }
@@ -274,14 +275,14 @@ public class BSPMap
                     theFilter.mesh = faceMesh.mesh;
 
                     #region Add Vertices as Children
-                    /*foreach (Vector3 vertex in theFilter.mesh.vertices)
-                {
-                    GameObject sphereVertex = new GameObject();
-                    sphereVertex.name = vertex.ToString();
-                    sphereVertex.transform.position = vertex;
-                    sphereVertex.transform.localScale = new Vector3(10f, 10f, 10f);
-                    sphereVertex.transform.parent = faceGO.transform;
-                }*/
+                    foreach (Vector3 vertex in theFilter.mesh.vertices)
+                    {
+                        GameObject sphereVertex = new GameObject();
+                        sphereVertex.name = vertex.ToString();
+                        sphereVertex.transform.position = vertex;
+                        sphereVertex.transform.localScale = new Vector3(10f, 10f, 10f);
+                        sphereVertex.transform.parent = faceGO.transform;
+                    }
                     #endregion
 
                     #region Set Material of GameObject
@@ -455,6 +456,21 @@ public class BSPMap
         }
         return uvLine;
     }
+    public void SaveDisplacementValues(string location)
+    {
+        List<string> lines = new List<string>();
+        
+        for(int i = 0; i < dispVerts.Length; i++)
+        {
+            lines.Add(i + ": " + dispVerts[i].vec + " " + dispVerts[i].dist);
+        }
+
+        try
+        {
+            File.WriteAllLines(@location, lines.ToArray());
+        }
+        catch (System.Exception e) { Debug.Log(e.Message); }
+    }
 
     /*private string PatchName(string original)
     {
@@ -620,42 +636,138 @@ public class BSPMap
         }
         #endregion
 
-        #region Triangulate
-        List<int> triangleIndices = new List<int>();
-
-        for (int i = 0; i < (originalVertices.Count / 2) - 0; i++)
-        {
-            int firstOrigIndex = (i * 2), secondOrigIndex = (i * 2) + 1, thirdOrigIndex = 0;
-            int firstIndex = surfaceVertices.IndexOf(originalVertices[firstOrigIndex]);
-            int secondIndex = surfaceVertices.IndexOf(originalVertices[secondOrigIndex]);
-            int thirdIndex = surfaceVertices.IndexOf(originalVertices[thirdOrigIndex]);
-
-            triangleIndices.Add(firstIndex);
-            triangleIndices.Add(secondIndex);
-            triangleIndices.Add(thirdIndex);
-        }
-        #endregion
-
         #region Apply Displacement
         if (face.dispinfo > -1)
         {
             ddispinfo_t disp = dispInfo[face.dispinfo];
             int power = Mathf.RoundToInt(Mathf.Pow(2, disp.power));
-            int dispVertIndex = disp.DispVertStart;
-            //Vector3 direction = dispInfo[face.dispinfo].startPosition.normalized;
-            //int surfaceVerticesIndex = surfaceVertices.IndexOf(disp.startPosition);
-            //int numberOfVertices = surfaceVertices.Count;
 
+            Vector3 forwardSide = surfaceVertices[1] - surfaceVertices[0];
+            Vector3 lineDirection = forwardSide.normalized;
+            Vector3 rightSide = surfaceVertices[2] - surfaceVertices[1];
+            Vector3 pointDirection = rightSide.normalized;
+            Vector3 faceUp = Vector3.Cross(lineDirection, pointDirection);
 
+            float lineSideSegmentationDistance = forwardSide.magnitude / power;
+            float pointSideSegmentationDistance = rightSide.magnitude / power;
+            List<Vector3> dispVertices = new List<Vector3>();
+            Vector3 startingPosition = surfaceVertices[0];
+
+            #region Setting Orientation
+            Vector3 dispStartingVertex = disp.startPosition;
+            dispStartingVertex = new Vector3(dispStartingVertex.x, dispStartingVertex.z, dispStartingVertex.y);
+            if (Vector3.Distance(dispStartingVertex, startingPosition + forwardSide) < 0.01f)
+            {
+                Vector3 tempDirection = lineDirection;
+                float tempDistance = lineSideSegmentationDistance;
+
+                startingPosition = startingPosition + forwardSide;
+                lineDirection = pointDirection;
+                lineSideSegmentationDistance = pointSideSegmentationDistance;
+                pointDirection = -tempDirection;
+                pointSideSegmentationDistance = tempDistance;
+            }
+            else if (Vector3.Distance(dispStartingVertex, startingPosition + rightSide) < 0.01f)
+            {
+                Vector3 tempDirection = lineDirection;
+                float temp = lineSideSegmentationDistance;
+
+                startingPosition = startingPosition + rightSide;
+                lineDirection = -pointDirection;
+                lineSideSegmentationDistance = pointSideSegmentationDistance;
+                pointDirection = tempDirection;
+                pointSideSegmentationDistance = temp;
+            }
+            else if (Vector3.Distance(dispStartingVertex, startingPosition + forwardSide + rightSide) < 0.01f)
+            {
+                startingPosition = startingPosition + forwardSide + rightSide;
+                lineDirection = -lineDirection;
+                pointDirection = -pointDirection;
+            }
+            #endregion
+
+            int orderNum = 0;
+            #region Method 12 (The one and only)
+            for (int line = 0; line < (power + 1); line++)
+            {
+                for (int point = 0; point < (power + 1); point++)
+                {
+                    Vector3 pointA = startingPosition + (pointDirection * pointSideSegmentationDistance * point) + (lineDirection * lineSideSegmentationDistance * line);
+
+                    Vector3 dispDirectionA = dispVerts[disp.DispVertStart + orderNum].vec;
+                    dispDirectionA = new Vector3(dispDirectionA.x, dispDirectionA.z, dispDirectionA.y);
+                    dispVertices.Add(pointA + (dispDirectionA * dispVerts[disp.DispVertStart + orderNum].dist));
+                    //Debug.DrawRay(pointA, dispDirectionA * dispVerts[disp.DispVertStart + orderNum].dist, Color.yellow, 1000000f);
+                    orderNum++;
+                }
+            }
+            #endregion
+
+            #region Debug
+            Vector3 centerPoint = Vector3.zero;
             for (int i = 0; i < surfaceVertices.Count; i++)
             {
-                Vector3 direction = dispVerts[dispVertIndex].vec;
-
-                Vector3 displaced = surfaceVertices[i] + direction * dispVerts[dispVertIndex].dist;
-
+                //Vector3 direction = dispVerts[dispVertIndex].vec;
+                //Vector3 displaced = surfaceVertices[i] + direction * dispVerts[dispVertIndex].dist;
                 //surfaceVertices[i] = displaced;
+                //dispVertIndex++;
 
-                dispVertIndex++;
+                centerPoint += surfaceVertices[i];
+            }
+            centerPoint /= surfaceVertices.Count;
+            //surfaceVertices.Add(centerPoint);
+
+            //Debug.DrawRay(centerPoint, faceUp * 500f, Color.green, 1000000f);
+            //Debug.DrawRay(centerPoint, faceForward * 500f, Color.blue, 1000000f);
+            //Debug.DrawRay(centerPoint, faceRight * 500f, Color.red, 1000000f);
+            //Debug.Log("Starting Vert: " + dispVertIndex + " Center: " + centerPoint);
+
+            //Debug.DrawRay(surfaceVertices[0], (new Vector3(dispVerts[disp.DispVertStart].vec.x, dispVerts[disp.DispVertStart].vec.z, dispVerts[disp.DispVertStart].vec.y)) * dispVerts[disp.DispVertStart].dist, Color.yellow, 1000000f);
+            #endregion
+
+            surfaceVertices = dispVertices;
+        }
+        #endregion
+
+        #region Triangulate
+        List<int> triangleIndices = new List<int>();
+
+        if (face.dispinfo > -1)
+        {
+            ddispinfo_t disp = dispInfo[face.dispinfo];
+            int power = Mathf.RoundToInt(Mathf.Pow(2, disp.power));
+
+            #region Method 12 Triangulation
+            for (int row = 0; row < power; row++)
+            {
+                for(int col = 0; col < power; col++)
+                {
+                    int currentLine = row * (power + 1);
+                    int nextLineStart = (row + 1) * (power + 1);
+
+                    triangleIndices.Add(currentLine + col);
+                    triangleIndices.Add(nextLineStart + col);
+                    triangleIndices.Add(currentLine + col + 1);
+
+                    triangleIndices.Add(currentLine + col + 1);
+                    triangleIndices.Add(nextLineStart + col);
+                    triangleIndices.Add(nextLineStart + col + 1);
+                }
+            }
+            #endregion
+        }
+        else
+        {
+            for (int i = 0; i < (originalVertices.Count / 2) - 0; i++)
+            {
+                int firstOrigIndex = (i * 2), secondOrigIndex = (i * 2) + 1, thirdOrigIndex = 0;
+                int firstIndex = surfaceVertices.IndexOf(originalVertices[firstOrigIndex]);
+                int secondIndex = surfaceVertices.IndexOf(originalVertices[secondOrigIndex]);
+                int thirdIndex = surfaceVertices.IndexOf(originalVertices[thirdOrigIndex]);
+
+                triangleIndices.Add(firstIndex);
+                triangleIndices.Add(secondIndex);
+                triangleIndices.Add(thirdIndex);
             }
         }
         #endregion
