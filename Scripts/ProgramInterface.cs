@@ -74,11 +74,18 @@ public class ProgramInterface : MonoBehaviour {
         //VPKParser vpkTest = new VPKParser(new FileStream("D:/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk", FileMode.Open));
         //Debug.Log(vpkTest.Parse());
         //ParseMDL();
+        //ParseVVD();
+        ParseModel("hostage_04", "C:/Users/oxter/Documents/csgo/models/characters/");
 	}
 
+    private void ParseModel(string name, string location)
+    {
+        SourceModel model = new SourceModel(name, location);
+        model.ParseModel();
+    }
     private void ParseMDL()
     {
-        FileStream mdlFile = new FileStream("D:/UpdatedCSGO/player/ctm_fbi.mdl", FileMode.Open);
+        FileStream mdlFile = new FileStream("C:/Users/oxter/Documents/csgo/models/player/ctm_fbi.mdl", FileMode.Open);
         MDLParser mdlTest = new MDLParser(mdlFile);
         mdlTest.ParseHeader();
         mdlTest.ParseBones();
@@ -87,7 +94,23 @@ public class ProgramInterface : MonoBehaviour {
         mdlTest.ParseTexturePaths();
         mdlFile.Close();
         GameObject mdl = new GameObject(mdlTest.name);
-        GameObject[] childBones = new GameObject[mdlTest.bones.Length];
+        //mdlTest.bodyParts[0].models[0].theMeshes[0].vertices[0];
+
+        foreach (mstudiobodyparts_t bodyPart in mdlTest.bodyParts)
+        {
+            GameObject bodyPartRepresentation = new GameObject(bodyPart.name);
+            foreach (mstudiomodel_t model in bodyPart.models)
+            {
+                GameObject modelRepresentation = new GameObject(new string(model.name));
+                modelRepresentation.transform.parent = bodyPartRepresentation.transform;
+                foreach (mstudiomesh_t mesh in model.theMeshes)
+                {
+                    GameObject meshRepresentation = new GameObject("A Mesh");
+                    meshRepresentation.transform.parent = modelRepresentation.transform;
+                }
+            }
+        }
+        /*GameObject[] childBones = new GameObject[mdlTest.bones.Length];
         //SkeletonBone[] skelBones = new SkeletonBone[childBones.Length];
         //GameObject mdl = new GameObject("TestMDL");
         for (int i = 0; i < childBones.Length; i++)
@@ -109,7 +132,32 @@ public class ProgramInterface : MonoBehaviour {
         //Animator mdlAnim = mdl.AddComponent<Animator>();
         //mdlAnim.avatar = mdlAvatar;
         mdl.transform.rotation = Quaternion.Euler(-90f, 0, 0);
-        //Debug.Log(mdlTest.bones.Length);
+        //Debug.Log(mdlTest.bones.Length);*/
+    }
+    private void ParseVVD()
+    {
+        FileStream vvdFile = new FileStream("C:/Users/oxter/Documents/csgo/models/player/ctm_fbi.vvd", FileMode.Open);
+        VVDParser vvdTest = new VVDParser(vvdFile);
+        vvdTest.ParseHeader();
+        vvdTest.ParseVertices();
+        vvdFile.Close();
+        GameObject vvd = new GameObject("VVDTest");
+        //mdlTest.bodyParts[0].models[0].theMeshes[0].vertices[0];
+
+        foreach(mstudiovertex_t[] vertices in vvdTest.vertices)
+        {
+            GameObject lodRepresentation = new GameObject("aLOD");
+            lodRepresentation.transform.parent = vvd.transform;
+            lodRepresentation.SetActive(false);
+            foreach (mstudiovertex_t vertex in vertices)
+            {
+                GameObject vertexRepresentation = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                vertexRepresentation.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+                vertexRepresentation.transform.position = vertex.m_vecPosition;
+                vertexRepresentation.transform.up = vertex.m_vecNormal;
+                vertexRepresentation.transform.parent = lodRepresentation.transform;
+            }
+        }
     }
 
     // Update is called once per frame

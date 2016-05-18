@@ -290,7 +290,7 @@ public class CSGOPlayer : MonoBehaviour {
                 aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightLowerArm));
                 aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightHand));
 
-                if(aimIK.solver.bones.Length > 0) aimIK.solver.bones[0].weight = 0;
+                if (aimIK.solver.bones.Length > 0) aimIK.solver.bones[0].weight = 0;
 
                 aimIKTarget = new GameObject(name + " AimIKTarget");
                 aimIK.solver.target = aimIKTarget.transform;
@@ -301,7 +301,7 @@ public class CSGOPlayer : MonoBehaviour {
     }
     private void ConfigureAimIK()
     {
-        if (aimIK != null)
+        if (aimIK != null && aimIK.solver.bones.Length > 0)
         {
             if (weapon != null)
             {

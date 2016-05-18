@@ -642,57 +642,58 @@ public class BSPMap
             ddispinfo_t disp = dispInfo[face.dispinfo];
             int power = Mathf.RoundToInt(Mathf.Pow(2, disp.power));
 
-            Vector3 forwardSide = surfaceVertices[1] - surfaceVertices[0];
-            Vector3 lineDirection = forwardSide.normalized;
-            Vector3 rightSide = surfaceVertices[2] - surfaceVertices[1];
-            Vector3 pointDirection = rightSide.normalized;
-            Vector3 faceUp = Vector3.Cross(lineDirection, pointDirection);
-
-            float lineSideSegmentationDistance = forwardSide.magnitude / power;
-            float pointSideSegmentationDistance = rightSide.magnitude / power;
             List<Vector3> dispVertices = new List<Vector3>();
             Vector3 startingPosition = surfaceVertices[0];
+            Vector3 topCorner = surfaceVertices[1], topRightCorner = surfaceVertices[2], rightCorner = surfaceVertices[3];
 
             #region Setting Orientation
             Vector3 dispStartingVertex = disp.startPosition;
             dispStartingVertex = new Vector3(dispStartingVertex.x, dispStartingVertex.z, dispStartingVertex.y);
-            if (Vector3.Distance(dispStartingVertex, startingPosition + forwardSide) < 0.01f)
+            if (Vector3.Distance(dispStartingVertex, topCorner) < 0.01f)
             {
-                Vector3 tempDirection = lineDirection;
-                float tempDistance = lineSideSegmentationDistance;
+                Vector3 tempCorner = startingPosition;
 
-                startingPosition = startingPosition + forwardSide;
-                lineDirection = pointDirection;
-                lineSideSegmentationDistance = pointSideSegmentationDistance;
-                pointDirection = -tempDirection;
-                pointSideSegmentationDistance = tempDistance;
+                startingPosition = topCorner;
+                topCorner = topRightCorner;
+                topRightCorner = rightCorner;
+                rightCorner = tempCorner;
             }
-            else if (Vector3.Distance(dispStartingVertex, startingPosition + rightSide) < 0.01f)
+            else if (Vector3.Distance(dispStartingVertex, rightCorner) < 0.01f)
             {
-                Vector3 tempDirection = lineDirection;
-                float temp = lineSideSegmentationDistance;
+                Vector3 tempCorner = startingPosition;
 
-                startingPosition = startingPosition + rightSide;
-                lineDirection = -pointDirection;
-                lineSideSegmentationDistance = pointSideSegmentationDistance;
-                pointDirection = tempDirection;
-                pointSideSegmentationDistance = temp;
+                startingPosition = rightCorner;
+                rightCorner = topRightCorner;
+                topRightCorner = topCorner;
+                topCorner = tempCorner;
             }
-            else if (Vector3.Distance(dispStartingVertex, startingPosition + forwardSide + rightSide) < 0.01f)
+            else if (Vector3.Distance(dispStartingVertex, topRightCorner) < 0.01f)
             {
-                startingPosition = startingPosition + forwardSide + rightSide;
-                lineDirection = -lineDirection;
-                pointDirection = -pointDirection;
+                Vector3 tempCorner = startingPosition;
+
+                startingPosition = topRightCorner;
+                topRightCorner = tempCorner;
+                tempCorner = rightCorner;
+                rightCorner = topCorner;
+                topCorner = tempCorner;
             }
             #endregion
 
             int orderNum = 0;
-            #region Method 12 (The one and only)
+            #region Method 13 (The one and only two)
+            Vector3 leftSide = (topCorner - startingPosition), rightSide = (topRightCorner - rightCorner);
+            float leftSideLineSegmentationDistance = leftSide.magnitude / power, rightSideLineSegmentationDistance = rightSide.magnitude / power;
             for (int line = 0; line < (power + 1); line++)
             {
                 for (int point = 0; point < (power + 1); point++)
                 {
-                    Vector3 pointA = startingPosition + (pointDirection * pointSideSegmentationDistance * point) + (lineDirection * lineSideSegmentationDistance * line);
+                    Vector3 leftPoint = (leftSide.normalized * line * leftSideLineSegmentationDistance) + startingPosition;
+                    Vector3 rightPoint = (rightSide.normalized * line * rightSideLineSegmentationDistance) + rightCorner;
+                    Vector3 currentLine = rightPoint - leftPoint;
+                    Vector3 pointDirection = currentLine.normalized;
+                    float pointSideSegmentationDistance = currentLine.magnitude / power;
+
+                    Vector3 pointA = leftPoint + (pointDirection * pointSideSegmentationDistance * point);
 
                     Vector3 dispDirectionA = dispVerts[disp.DispVertStart + orderNum].vec;
                     dispDirectionA = new Vector3(dispDirectionA.x, dispDirectionA.z, dispDirectionA.y);
