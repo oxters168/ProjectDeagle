@@ -2,12 +2,20 @@
 //using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 public class BSPMap
 {
+    public readonly string[] undesiredTextures = new string[] { "TOOLS/TOOLSTRIGGER", "TOOLS/TOOLSBLACK", "TOOLS/CLIMB", "TOOLS/CLIMB_ALPHA", "TOOLS/FOGVOLUME", "TOOLS/TOOLSAREAPORTAL-DX10", "TOOLS/TOOLSBLACK", "TOOLS/TOOLSBLOCK_LOS",
+                "TOOLS/TOOLSBLOCK_LOS-DX10", "TOOLS/TOOLSBLOCKBOMB", "TOOLS/TOOLSBLOCKBULLETS", "TOOLS/TOOLSBLOCKBULLETS-DX10", "TOOLS/TOOLSBLOCKLIGHT", "TOOLS/TOOLSCLIP", "TOOLS/TOOLSCLIP-DX10", "TOOLS/TOOLSDOTTED", "TOOLS/TOOLSFOG", "TOOLS/TOOLSFOG-DX10",
+                "TOOLS/TOOLSHINT", "TOOLS/TOOLSHINT-DX10", "TOOLS/TOOLSINVISIBLE", "TOOLS/TOOLSINVISIBLE-DX10", "TOOLS/TOOLSINVISIBLELADDER", "TOOLS/TOOLSNODRAW", "TOOLS/TOOLSNPCCLIP", "TOOLS/TOOLSOCCLUDER", "TOOLS/TOOLSOCCLUDER-DX10", "TOOLS/TOOLSORIGIN",
+                "TOOLS/TOOLSPLAYERCLIP", "TOOLS/TOOLSPLAYERCLIP-DX10", "TOOLS/TOOLSSKIP", "TOOLS/TOOLSSKIP-DX10", "TOOLS/TOOLSSKYBOX2D", "TOOLS/TOOLSSKYFOG", "TOOLS/TOOLSTRIGGER", "TOOLS/TOOLSTRIGGER-DX10" };
+
     #region Map Variables
     public static Dictionary<string, BSPMap> loadedMaps = new Dictionary<string, BSPMap>();
     public string mapName;
+    private BSPParser bsp;
+    private FileStream mapFile = null;
     public GameObject mapGameObject;
 
     public string mapLocation;
@@ -17,8 +25,9 @@ public class BSPMap
     //public static string mapsLocation = "/storage/emulated/0/Download/CSGO/Maps/";
     //public static string texturesDir = "D:/CSGOModels/Textures/";
     //public static string texturesDir = "/storage/emulated/0/Download/CSGO/Textures/";
-    private static List<Texture2D> mapTextures;
-    private static List<string> textureLocations;
+    private static List<SourceTexture> mapTextures = new List<SourceTexture>();
+    private static List<string> textureLocations = new List<string>();
+    //private static Dictionary<string, SourceTexture> mapTextures = new Dictionary<string, SourceTexture>();
 
     private Material mainSurfaceMaterial = Resources.Load<Material>("Materials/MapMaterial");
 
@@ -39,6 +48,8 @@ public class BSPMap
     private int[] texStringTable;
     private string textureStringData;
 
+    private StaticProps_t staticProps;
+
     public bool alreadyMade = false;
     #endregion
 
@@ -58,52 +69,36 @@ public class BSPMap
 
     public void BuildMap()
     {
-        mapTextures = new List<Texture2D>();
-        textureLocations = new List<string>();
+        //mapTextures = new List<Texture2D>();
+        //textureLocations = new List<string>();
         bool usingPlainTextures = false;
 
-        System.IO.FileStream mapFile = null;
         try
         {
             Debug.Log(mapLocation + mapName + ".bsp");
-            if (mapLocation.Length > 0 && System.IO.File.Exists(mapLocation + mapName + ".bsp")) mapFile = new System.IO.FileStream(mapLocation + mapName + ".bsp", System.IO.FileMode.Open);
-            else if (System.IO.File.Exists("Assets\\Resources\\Maps\\" + mapName + ".bsp")) mapFile = new System.IO.FileStream("Assets\\Resources\\Maps\\" + mapName + ".bsp", System.IO.FileMode.Open);
+            if (mapLocation.Length > 0 && File.Exists(mapLocation + mapName + ".bsp")) mapFile = new FileStream(mapLocation + mapName + ".bsp", FileMode.Open);
+            else if (File.Exists("Assets\\Resources\\Maps\\" + mapName + ".bsp")) mapFile = new FileStream("Assets\\Resources\\Maps\\" + mapName + ".bsp", FileMode.Open);
         }
         catch (System.Exception e) { Debug.Log(e.Message); }
 
         if (mapFile != null)
         {
-            #region Read map
-            BSPParser bsp = new BSPParser(mapFile);
+            ReadFile();
 
-            string entities = bsp.GetEntities();
-            Debug.Log("Map Entities: " + entities);
-            vertices = bsp.GetVertices();
-            
-            //vertices = bsp.lumpData[3];
-            //planes = bsp.GetPlanes();
-            edges = bsp.GetEdges();
-            //origFaces = bsp.GetOriginalFaces();
-            faces = bsp.GetFaces();
-            surfedges = bsp.GetSurfedges();
+            #region Static Props
+            for(int i = 0; i < staticProps.staticPropInfo.Length; i++)
+            {
+                string modelName = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType], modelLocation = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType];
+                modelName = modelName.Substring(modelName.LastIndexOf("/") + 1);
+                modelName = modelName.Substring(0, modelName.LastIndexOf("."));
+                modelLocation = modelLocation.Substring(0, modelLocation.LastIndexOf("/"));
 
-            //brushes = bsp.GetBrushes();
-            //brushSides = bsp.GetBrushSides();
-            dispInfo = bsp.GetDispInfo();
-            dispVerts = bsp.GetDispVerts();
-
-            texInfo = bsp.GetTextureInfo();
-            texData = bsp.GetTextureData();
-            texStringTable = bsp.GetTextureStringTable();
-            textureStringData = bsp.GetTextureStringData();
-
-            mapFile.Close();
+                SourceModel propModel = SourceModel.GrabModel(modelName, "C:/Users/oxter/Documents/csgo/" + modelLocation);
+                GameObject propModelGO = propModel.InstantiateGameObject();
+                propModelGO.transform.position = staticProps.staticPropInfo[i].Origin;
+                propModelGO.transform.localRotation = Quaternion.Euler(staticProps.staticPropInfo[i].Angles.x, staticProps.staticPropInfo[i].Angles.y + 180f, staticProps.staticPropInfo[i].Angles.z);
+            }
             #endregion
-
-            List<string> undesiredTextures = new List<string>(new string[] { "TOOLS/TOOLSTRIGGER", "TOOLS/TOOLSBLACK", "TOOLS/CLIMB", "TOOLS/CLIMB_ALPHA", "TOOLS/FOGVOLUME", "TOOLS/TOOLSAREAPORTAL-DX10", "TOOLS/TOOLSBLACK", "TOOLS/TOOLSBLOCK_LOS",
-                "TOOLS/TOOLSBLOCK_LOS-DX10", "TOOLS/TOOLSBLOCKBOMB", "TOOLS/TOOLSBLOCKBULLETS", "TOOLS/TOOLSBLOCKBULLETS-DX10", "TOOLS/TOOLSBLOCKLIGHT", "TOOLS/TOOLSCLIP", "TOOLS/TOOLSCLIP-DX10", "TOOLS/TOOLSDOTTED", "TOOLS/TOOLSFOG", "TOOLS/TOOLSFOG-DX10",
-                "TOOLS/TOOLSHINT", "TOOLS/TOOLSHINT-DX10", "TOOLS/TOOLSINVISIBLE", "TOOLS/TOOLSINVISIBLE-DX10", "TOOLS/TOOLSINVISIBLELADDER", "TOOLS/TOOLSNODRAW", "TOOLS/TOOLSNPCCLIP", "TOOLS/TOOLSOCCLUDER", "TOOLS/TOOLSOCCLUDER-DX10", "TOOLS/TOOLSORIGIN",
-                "TOOLS/TOOLSPLAYERCLIP", "TOOLS/TOOLSPLAYERCLIP-DX10", "TOOLS/TOOLSSKIP", "TOOLS/TOOLSSKIP-DX10", "TOOLS/TOOLSSKYBOX2D", "TOOLS/TOOLSSKYFOG", "TOOLS/TOOLSTRIGGER", "TOOLS/TOOLSTRIGGER-DX10" });
 
             mainSurfaceMaterial = Resources.Load<Material>("Materials/MapMaterial");
             mapGameObject = new GameObject(mapName);
@@ -116,15 +111,19 @@ public class BSPMap
                 currentFace.face = face;
 
                 #region Get Texture Info
-                texflags textureFlag = texflags.SURF_NODRAW;
-                try { textureFlag = ((texflags)texInfo[face.texinfo].flags); }
+                //texflags textureFlag = texflags.SURF_NODRAW;
+                try { currentFace.textureFlag = ((texflags)texInfo[face.texinfo].flags); }
                 catch (System.Exception) { }
 
                 currentFace.rawTexture = textureStringData.Substring(Mathf.Abs(texStringTable[Mathf.Abs(texData[Mathf.Abs(texInfo[Mathf.Abs(face.texinfo)].texdata)].nameStringTableID)]));
                 currentFace.rawTexture = currentFace.rawTexture.Substring(0, currentFace.rawTexture.IndexOf(BSPParser.TEXTURE_STRING_DATA_SPLITTER));
-                currentFace.rawTexture = RemoveMisleadingPath(currentFace.rawTexture);
-                //currentFace.materialLocation = texturesDir + currentFace.rawTexture + ".vmt";
-                //currentFace.textureLocation = texturesDir + currentFace.rawTexture + ".png";
+                SourceTexture srcTexture = SourceTexture.GrabTexture(currentFace.rawTexture);
+                currentFace.textureLocation = srcTexture.location;
+
+                currentFace.s = new Vector3(texInfo[face.texinfo].textureVecs[0][0], texInfo[face.texinfo].textureVecs[0][2], texInfo[face.texinfo].textureVecs[0][1]);
+                currentFace.t = new Vector3(texInfo[face.texinfo].textureVecs[1][0], texInfo[face.texinfo].textureVecs[1][2], texInfo[face.texinfo].textureVecs[1][1]);
+                currentFace.xOffset = texInfo[face.texinfo].textureVecs[0][3];
+                currentFace.yOffset = texInfo[face.texinfo].textureVecs[1][3];
 
                 bool undesired = false;
                 foreach (string undesiredTexture in undesiredTextures)
@@ -133,132 +132,18 @@ public class BSPMap
                 }
                 #endregion
 
-                if (!undesired && (textureFlag & texflags.SURF_SKY2D) != texflags.SURF_SKY2D && (textureFlag & texflags.SURF_SKY) != texflags.SURF_SKY && (textureFlag & texflags.SURF_NODRAW) != texflags.SURF_NODRAW && (textureFlag & texflags.SURF_SKIP) != texflags.SURF_SKIP)
+                if (!undesired && (currentFace.textureFlag & texflags.SURF_SKY2D) != texflags.SURF_SKY2D && (currentFace.textureFlag & texflags.SURF_SKY) != texflags.SURF_SKY && (currentFace.textureFlag & texflags.SURF_NODRAW) != texflags.SURF_NODRAW && (currentFace.textureFlag & texflags.SURF_SKIP) != texflags.SURF_SKIP)
                 {
-                    currentFace.s = new Vector3(texInfo[face.texinfo].textureVecs[0][0], texInfo[face.texinfo].textureVecs[0][2], texInfo[face.texinfo].textureVecs[0][1]);
-                    currentFace.t = new Vector3(texInfo[face.texinfo].textureVecs[1][0], texInfo[face.texinfo].textureVecs[1][2], texInfo[face.texinfo].textureVecs[1][1]);
-                    currentFace.xOffset = texInfo[face.texinfo].textureVecs[0][3];
-                    currentFace.yOffset = texInfo[face.texinfo].textureVecs[1][3];
-
-                    string vmtFile = "";
-                    //currentFace.materialLocation = PatchName(currentFace.materialLocation);
-                    if (Directory.Exists(ApplicationPreferences.texturesDir))
+                    //if(!mapTextures.ContainsKey(srcTexture.location)) mapTextures.Add(srcTexture.location, srcTexture);
+                    if(textureLocations.IndexOf(srcTexture.location) < 0)
                     {
-                        currentFace.rawTexture = PatchName(ApplicationPreferences.texturesDir, currentFace.rawTexture, "vmt");
-                        vmtFile = ApplicationPreferences.texturesDir + currentFace.rawTexture + ".vmt";
-                        if (!File.Exists(vmtFile)) vmtFile = ApplicationPreferences.texturesDir + currentFace.rawTexture + ".txt";
-                    }
-                    else
-                    {
-                        currentFace.rawTexture = PatchName(currentFace.rawTexture, "vmt");
-                    }
-
-                    //if (File.Exists(currentFace.materialLocation))
-                    string[] vmtLines = null;
-                    if (File.Exists(vmtFile))
-                    {
-                        try { vmtLines = File.ReadAllLines(@vmtFile); }
-                        catch (System.Exception e) { Debug.Log(e.Message); }
-                    }
-                    else
-                    {
-                        TextAsset vmtTextAsset = Resources.Load<TextAsset>("Textures/Plain/" + currentFace.rawTexture);
-                        if (vmtTextAsset != null) vmtLines = vmtTextAsset.text.Split('\n');
-                    }
-
-                    if (vmtLines != null)
-                    {
-                        string baseTexture = "";
-
-                        foreach (string line in vmtLines)
-                        {
-                            if (line.IndexOf("$") > -1)
-                            {
-                                string materialInfo = line.Substring(line.IndexOf("$") + 1);
-                                if (materialInfo.IndexOf(" ") > -1 && materialInfo.IndexOf(" ") < materialInfo.IndexOf("\"") && materialInfo.Substring(0, materialInfo.IndexOf(" ")).Equals("basetexture", System.StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    baseTexture = materialInfo.Substring(materialInfo.IndexOf(" ") + 1);
-                                    baseTexture = baseTexture.Substring(baseTexture.IndexOf("\"") + 1);
-                                    baseTexture = baseTexture.Substring(0, baseTexture.IndexOf("\""));
-                                    break;
-                                }
-                                else if (materialInfo.IndexOf("\"") > -1 && materialInfo.IndexOf("\"") < materialInfo.IndexOf(" ") && materialInfo.Substring(0, materialInfo.IndexOf("\"")).Equals("basetexture", System.StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    baseTexture = materialInfo.Substring(materialInfo.IndexOf("\"") + 1);
-                                    baseTexture = baseTexture.Substring(baseTexture.IndexOf("\"") + 1);
-                                    baseTexture = baseTexture.Substring(0, baseTexture.IndexOf("\""));
-                                    break;
-                                }
-                            }
-                        }
-
-                        baseTexture = RemoveMisleadingPath(baseTexture);
-                        if (baseTexture.Length > 0)
-                        {
-                            //currentFace.textureLocation = texturesDir + baseTexture + ".png";
-                            currentFace.rawTexture = baseTexture;
-                        }
-                    }
-
-                    //currentFace.textureLocation = PatchName(currentFace.textureLocation);
-                    if (Directory.Exists(ApplicationPreferences.texturesDir)) currentFace.rawTexture = PatchName(ApplicationPreferences.texturesDir, currentFace.rawTexture, "png");
-                    else currentFace.rawTexture = PatchName(currentFace.rawTexture, "png");
-
-                    //int textureIndex = textureLocations.IndexOf(currentFace.textureLocation);
-                    int textureIndex = textureLocations.IndexOf(currentFace.rawTexture);
-                    Texture2D faceTexture = null;
-                    if (textureIndex > -1)
-                    {
-                        faceTexture = mapTextures[textureIndex];
-                    }
-                    else
-                    {
-                        //if (File.Exists(currentFace.textureLocation))
-                        if (File.Exists(ApplicationPreferences.texturesDir + currentFace.rawTexture + ".png"))
-                        {
-                            byte[] bytes = null;
-                            //try { bytes = File.ReadAllBytes(currentFace.textureLocation); } catch(System.Exception e) { Debug.Log(e.Message); }
-                            try { bytes = File.ReadAllBytes(ApplicationPreferences.texturesDir + currentFace.rawTexture + ".png"); }
-                            catch (System.Exception e) { Debug.Log(e.Message); }
-                            if (bytes != null)
-                            {
-                                faceTexture = new Texture2D(0, 0);
-                                faceTexture.LoadImage(bytes);
-                                bytes = null;
-                                //if (averageTextures) AverageTexture(faceTexture);
-                                //else if (decreaseTextureSizes) DecreaseTextureSize(faceTexture, maxSizeAllowed);
-                                //faceTexture.wrapMode = TextureWrapMode.Repeat;
-                                //bytes = null;
-                                //textureLocations.Add(currentFace.textureLocation);
-                                //textureLocations.Add(currentFace.rawTexture);
-                                //mapTextures.Add(faceTexture);
-                            }
-                        }
-                        else
-                        {
-                            usingPlainTextures = true;
-                            faceTexture = Resources.Load<Texture2D>("Textures/Plain/" + currentFace.rawTexture);
-                        }
-
-                        if (faceTexture != null)
-                        {
-                            //faceTexture.LoadImage(bytes);
-                            if (ApplicationPreferences.averageTextures) AverageTexture(faceTexture);
-                            else if (ApplicationPreferences.decreaseTextureSizes) DecreaseTextureSize(faceTexture, ApplicationPreferences.maxSizeAllowed);
-                            faceTexture.wrapMode = TextureWrapMode.Repeat;
-                            //bytes = null;
-                            //textureLocations.Add(currentFace.textureLocation);
-                            textureLocations.Add(currentFace.rawTexture);
-                            mapTextures.Add(faceTexture);
-                        }
+                        mapTextures.Add(srcTexture);
+                        textureLocations.Add(srcTexture.location);
                     }
 
                     currentFace.mesh = MakeFace(face);
                     allFaces.Add(currentFace);
                 }
-
-                //Debug.Log("Added Face");
-                //yield return null;
             }
             #endregion
 
@@ -275,25 +160,25 @@ public class BSPMap
                     theFilter.mesh = faceMesh.mesh;
 
                     #region Add Vertices as Children
-                    foreach (Vector3 vertex in theFilter.mesh.vertices)
+                    /*foreach (Vector3 vertex in theFilter.mesh.vertices)
                     {
                         GameObject sphereVertex = new GameObject();
                         sphereVertex.name = vertex.ToString();
                         sphereVertex.transform.position = vertex;
                         sphereVertex.transform.localScale = new Vector3(10f, 10f, 10f);
                         sphereVertex.transform.parent = faceGO.transform;
-                    }
+                    }*/
                     #endregion
 
                     #region Set Material of GameObject
                     Material faceMaterial = mainSurfaceMaterial;
 
                     //int textureIndex = textureLocations.IndexOf(faceMesh.textureLocation);
-                    int textureIndex = textureLocations.IndexOf(faceMesh.rawTexture);
+                    //int textureIndex = textureLocations.IndexOf(faceMesh.rawTexture);
                     Texture2D faceTexture = null;
-                    if (textureIndex > -1)
+                    if (textureLocations.IndexOf(faceMesh.textureLocation) > -1)
                     {
-                        faceTexture = mapTextures[textureIndex];
+                        faceTexture = mapTextures[textureLocations.IndexOf(faceMesh.textureLocation)].texture;
                     }
                     if (faceTexture != null)
                     {
@@ -316,7 +201,7 @@ public class BSPMap
                 #region Create Atlas & Remap UVs
                 AtlasMapper customAtlas = new AtlasMapper();
                 if (usingPlainTextures) customAtlas.cushion = 0;
-                customAtlas.AddTextures(mapTextures.ToArray());
+                customAtlas.AddTextures(GetTexturesAsArray());
                 Texture2D packedMapTextures = customAtlas.atlas;
                 Rect[] uvReMappers = customAtlas.mappedUVs;
                 Material mapAtlas = new Material(ApplicationPreferences.mapAtlasMaterial);
@@ -324,11 +209,12 @@ public class BSPMap
                 mapAtlas.mainTextureScale = new Vector2(1f, 1f);
                 mapAtlas.mainTexture = packedMapTextures;
                 //mapAtlas.mainTexture.wrapMode = TextureWrapMode.Clamp;
+                //List<string> textureKeys = mapTextures.Keys.ToList();
                 for (int i = 0; i < allFaces.Count; i++)
                 {
                     //if (i < 10) { Debug.Log(i + " Triangles: " + allFaces[i].mesh.triangles.Length); }
-                    //int textureIndex = textureLocations.IndexOf(allFaces[i].textureLocation);
-                    int textureIndex = textureLocations.IndexOf(allFaces[i].rawTexture);
+                    int textureIndex = textureLocations.IndexOf(allFaces[i].textureLocation);
+                    //int textureIndex = textureKeys.IndexOf(allFaces[i].textureLocation);
                     //Texture2D faceTexture = null;
                     if (textureIndex > -1 && textureIndex < uvReMappers.Length)
                     {
@@ -341,14 +227,10 @@ public class BSPMap
                         {
                             atlasTexturePosition[j] = new Vector2(surfaceTextureRect.x + 0.0f, surfaceTextureRect.y + 0.0f);
                             atlasTextureSize[j] = new Vector2(surfaceTextureRect.width - 0.0f, surfaceTextureRect.height - 0.0f);
-
-                            //yield return null;
                         }
                         surfaceMesh.uv2 = atlasTexturePosition;
                         surfaceMesh.uv3 = atlasTextureSize;
                     }
-
-                    //yield return null;
                 }
                 #endregion
                 Debug.Log("Created Atlas and Remapped UVs");
@@ -399,6 +281,7 @@ public class BSPMap
                         {
                             currentCombine[j].mesh = allFaces[combinesIndices[i][j]].mesh;
                             currentCombine[j].transform = mapGameObject.transform.localToWorldMatrix;
+                            //yield return null;
                         }
 
                         partialMeshes[i] = new GameObject(mapName + " Part " + (i + 1));
@@ -424,6 +307,36 @@ public class BSPMap
 
         //SaveUVValues("C:\\Users\\oxter\\Documents\\" + mapName + "_UV.txt");
     }
+    private void ReadFile()
+    {
+        bsp = new BSPParser(mapFile);
+
+        string entities = bsp.GetEntities();
+        Debug.Log("Map Entities: " + entities);
+        vertices = bsp.GetVertices();
+
+        //vertices = bsp.lumpData[3];
+        //planes = bsp.GetPlanes();
+        edges = bsp.GetEdges();
+        //origFaces = bsp.GetOriginalFaces();
+        faces = bsp.GetFaces();
+        surfedges = bsp.GetSurfedges();
+
+        //brushes = bsp.GetBrushes();
+        //brushSides = bsp.GetBrushSides();
+        dispInfo = bsp.GetDispInfo();
+        dispVerts = bsp.GetDispVerts();
+
+        texInfo = bsp.GetTextureInfo();
+        texData = bsp.GetTextureData();
+        texStringTable = bsp.GetTextureStringTable();
+        textureStringData = bsp.GetTextureStringData();
+
+        staticProps = bsp.GetStaticProps();
+
+        mapFile.Close();
+    }
+
     public void SaveUVValues(string location)
     {
         List<string> lines = new List<string>();
@@ -456,20 +369,16 @@ public class BSPMap
         }
         return uvLine;
     }
-    public void SaveDisplacementValues(string location)
-    {
-        List<string> lines = new List<string>();
-        
-        for(int i = 0; i < dispVerts.Length; i++)
-        {
-            lines.Add(i + ": " + dispVerts[i].vec + " " + dispVerts[i].dist);
-        }
 
-        try
+    public static Texture2D[] GetTexturesAsArray()
+    {
+        Texture2D[] textures = new Texture2D[mapTextures.Count];
+        for(int i = 0; i < textures.Length; i++)
         {
-            File.WriteAllLines(@location, lines.ToArray());
+            //textures[i] = mapTextures.ElementAt(i).Value.texture;
+            textures[i] = mapTextures[i].texture;
         }
-        catch (System.Exception e) { Debug.Log(e.Message); }
+        return textures;
     }
 
     /*private string PatchName(string original)
@@ -511,7 +420,7 @@ public class BSPMap
         //if (!File.Exists(prep)) prep = original.Replace("\\", "/");
         return prep;
     }*/
-    private string PatchName(string rootPath, string original, string ext)
+    /*private string PatchName(string rootPath, string original, string ext)
     {
         string path = rootPath.Replace("\\", "/").ToLower();
         string prep = original.Replace("\\", "/").ToLower();
@@ -600,6 +509,45 @@ public class BSPMap
 
         return goodPath.ToString();
     }
+    public void DecreaseTextureSize(Texture2D texture, float maxSize)
+    {
+        if (Mathf.Max(texture.width, texture.height) > maxSize)
+        {
+            float ratio = Mathf.Max(texture.width, texture.height) / maxSize;
+            int decreasedWidth = (int)(texture.width / ratio), decreasedHeight = (int)(texture.height / ratio);
+
+            TextureScale.Point(texture, decreasedWidth, decreasedHeight);
+        }
+    }
+    public void AverageTexture(Texture2D original)
+    {
+        Color allColorsInOne = new Color();
+        Color[] originalColors = original.GetPixels();
+
+        foreach (Color color in originalColors)
+        {
+            allColorsInOne.r += color.r;
+            allColorsInOne.g += color.g;
+            allColorsInOne.b += color.b;
+            allColorsInOne.a += color.a;
+        }
+
+        allColorsInOne.r /= originalColors.Length;
+        allColorsInOne.g /= originalColors.Length;
+        allColorsInOne.b /= originalColors.Length;
+        allColorsInOne.a /= originalColors.Length;
+
+        original.Resize(16, 16);
+        Color[] newColors = original.GetPixels();
+        for (int i = 0; i < newColors.Length; i++)
+        {
+            newColors[i] = allColorsInOne;
+        }
+
+        original.wrapMode = TextureWrapMode.Clamp;
+        original.SetPixels(newColors);
+        original.Apply();
+    }*/
 
     public Mesh MakeFace(dface_t face)
     {
@@ -810,46 +758,6 @@ public class BSPMap
         return mesh;
     }
 
-    public void DecreaseTextureSize(Texture2D texture, float maxSize)
-    {
-        if (Mathf.Max(texture.width, texture.height) > maxSize)
-        {
-            float ratio = Mathf.Max(texture.width, texture.height) / maxSize;
-            int decreasedWidth = (int) (texture.width / ratio), decreasedHeight = (int) (texture.height / ratio);
-            
-            TextureScale.Point(texture, decreasedWidth, decreasedHeight);
-        }
-    }
-    public void AverageTexture(Texture2D original)
-    {
-        Color allColorsInOne = new Color();
-        Color[] originalColors = original.GetPixels();
-
-        foreach (Color color in originalColors)
-        {
-            allColorsInOne.r += color.r;
-            allColorsInOne.g += color.g;
-            allColorsInOne.b += color.b;
-            allColorsInOne.a += color.a;
-        }
-
-        allColorsInOne.r /= originalColors.Length;
-        allColorsInOne.g /= originalColors.Length;
-        allColorsInOne.b /= originalColors.Length;
-        allColorsInOne.a /= originalColors.Length;
-
-        original.Resize(16, 16);
-        Color[] newColors = original.GetPixels();
-        for (int i = 0; i < newColors.Length; i++)
-        {
-            newColors[i] = allColorsInOne;
-        }
-
-        original.wrapMode = TextureWrapMode.Clamp;
-        original.SetPixels(newColors);
-        original.Apply();
-    }
-
     public void SetVisibility(bool visibleState)
     {
         if(mapGameObject != null) RecursiveVisibillity(mapGameObject.transform, visibleState);
@@ -874,6 +782,7 @@ public class FaceMesh
     public Mesh mesh;
     public Vector3 s, t;
     public float xOffset, yOffset;
-    public string rawTexture;
+    public string rawTexture, textureLocation;
+    public texflags textureFlag = texflags.SURF_NODRAW;
     //public string textureLocation, materialLocation;
 }

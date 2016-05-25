@@ -56,8 +56,8 @@ public class MDLParser {
         // ex (00000001,00000000,00000000,11000000) means flags for position 0, 30, and 31 are set. 
         // Set model flags section for more information
 
-        Debug.Log("ID: " + header1.id + ", \nVersion: " + header1.version + ", \nCheckSum: " + header1.checkSum + ", \nName: " + this.name + ", \nLength: " + header1.dataLength);
-        Debug.Log("EyePos: " + header1.eyeposition + ", \nIllumPos: " + header1.illumposition + ", \nHullMin: " + header1.hull_min + ", \nHullMax: " + header1.hull_max + ", \nViewBBMin: " + header1.view_bbmin + ", \nViewBBMax: " + header1.view_bbmax);
+        //Debug.Log("ID: " + header1.id + ", \nVersion: " + header1.version + ", \nCheckSum: " + header1.checkSum + ", \nName: " + this.name + ", \nLength: " + header1.dataLength);
+        //Debug.Log("EyePos: " + header1.eyeposition + ", \nIllumPos: " + header1.illumposition + ", \nHullMin: " + header1.hull_min + ", \nHullMax: " + header1.hull_max + ", \nViewBBMin: " + header1.view_bbmin + ", \nViewBBMax: " + header1.view_bbmax);
 
         /*
          * After this point, the header contains many references to offsets
@@ -795,7 +795,6 @@ public class MDLParser {
 
         return textures;
     }
-
     public string[] ParseTexturePaths()
     {
         if (header1.texturedir_count >= 0)

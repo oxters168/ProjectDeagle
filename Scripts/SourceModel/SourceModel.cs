@@ -1,18 +1,24 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 using System.IO;
 
 public class SourceModel
 {
+    private static Dictionary<string, SourceModel> loadedModels = new Dictionary<string, SourceModel>();
+    private static GameObject staticPropLibrary = new GameObject("StaticPropPrefabs");
+
     public string modelName { get; private set; }
     public string modelLocation { get; private set; }
 
-    GameObject modelGO;
+    private GameObject modelPrefab;
+    public Mesh[] modelMeshes;
+    public SourceTexture[] modelTextures;
 
     private MDLParser mdl;
     private VVDParser vvd;
     private VTXParser vtx;
 
-    public SourceModel(string name, string location)
+    private SourceModel(string name, string location)
     {
         modelName = name;
         modelLocation = location;
@@ -22,86 +28,114 @@ public class SourceModel
             if (modelLocation.IndexOf("/") > -1) modelLocation = modelLocation + "/";
             else modelLocation = modelLocation + "\\";
         }
+
+        loadedModels.Add(location + name, this);
     }
 
-    public GameObject ParseModel()
+    public static SourceModel GrabModel(string name, string location)
     {
-        modelGO = new GameObject(modelName);
+        SourceModel model = null;
 
-        ReadFiles();
-
-        if (mdl == null) { Debug.Log("MDL missing"); return null; }
-        if (mdl.bodyParts == null) { Debug.Log("Body Parts missing"); return null; }
-
-        #region Building
-        for (int i = 0; i < mdl.bodyParts.Length; i++)
+        if (loadedModels.ContainsKey(location + name))
         {
-            GameObject bodyPartRepresentation = new GameObject(mdl.bodyParts[i].name);
-            bodyPartRepresentation.transform.parent = modelGO.transform;
-            for (int j = 0; j < mdl.bodyParts[i].models.Length; j++)
-            {
-                GameObject modelRepresentation = new GameObject(new string(mdl.bodyParts[i].models[j].name));
-                modelRepresentation.transform.parent = bodyPartRepresentation.transform;
+            model = loadedModels[location + name];
+        }
+        else
+        {
+            model = new SourceModel(name, location);
+            model.modelPrefab = new GameObject(model.modelName);
+            model.modelPrefab.transform.parent = staticPropLibrary.transform;
+            model.modelPrefab.SetActive(false);
 
-                int currentPosition = 0;
-                for (int k = 0; k < mdl.bodyParts[i].models[j].theMeshes.Length; k++)
+            model.ReadFiles();
+
+            if (model.mdl == null) { Debug.Log("MDL missing"); return null; }
+            if (model.mdl.bodyParts == null) { Debug.Log("Body Parts missing"); return null; }
+
+            #region Grabbing Textures
+            //if(model.mdl.texturePaths.Length == model.mdl.textures.Length)
+            //{
+                model.modelTextures = new SourceTexture[model.mdl.textures.Length];
+                for(int i = 0; i < model.modelTextures.Length; i++)
                 {
-                    GameObject meshRepresentation = new GameObject(mdl.bodyParts[i].models[j].theMeshes[k].id.ToString());
-                    meshRepresentation.transform.parent = modelRepresentation.transform;
+                    string texturePath = "", textureName = "";
+                    if (model.mdl.texturePaths != null && model.mdl.texturePaths.Length > 0 && model.mdl.texturePaths[0] != null) texturePath = model.mdl.texturePaths[0];
+                    if (model.mdl.textures[i] != null) textureName = model.mdl.textures[i].name;
+                    model.modelTextures[i] = SourceTexture.GrabTexture(texturePath + textureName);
+                    Debug.Log("Attempted to grab texture: " + model.modelTextures[i].location);
+                }
+            //}
+            /*for (int i = 0; i < model.mdl.texturePaths.Length; i++)
+            {
+                Debug.Log(model.mdl.texturePaths[i]);
+            }
+            for (int i = 0; i < model.mdl.textures.Length; i++)
+            {
+                Debug.Log(model.mdl.textures[i].name);
+            }*/
+            #endregion
 
-                    Vector3[] vertices = new Vector3[mdl.bodyParts[i].models[j].theMeshes[k].vertexData.lodVertexCount[0]];
-                    Vector3[] normals = new Vector3[mdl.bodyParts[i].models[j].theMeshes[k].vertexData.lodVertexCount[0]];
-                    for (int l = 0; l < vertices.Length; l++)
+            #region Building
+            int textureIndex = 0;
+            List<Mesh> meshes = new List<Mesh>();
+            for (int i = 0; i < model.mdl.bodyParts.Length; i++)
+            {
+                GameObject bodyPartRepresentation = new GameObject(model.mdl.bodyParts[i].name);
+                bodyPartRepresentation.transform.parent = model.modelPrefab.transform;
+                for (int j = 0; j < model.mdl.bodyParts[i].models.Length; j++)
+                {
+                    GameObject modelRepresentation = new GameObject(new string(model.mdl.bodyParts[i].models[j].name));
+                    modelRepresentation.transform.parent = bodyPartRepresentation.transform;
+
+                    int currentPosition = 0;
+                    for (int k = 0; k < model.mdl.bodyParts[i].models[j].theMeshes.Length; k++)
                     {
-                        if (currentPosition < vvd.vertices[0].Length)
-                            vertices[l] = vvd.vertices[0][currentPosition].m_vecPosition;
-                        if (currentPosition < vvd.vertices[0].Length)
-                            normals[l] = vvd.vertices[0][currentPosition].m_vecNormal;
-                        currentPosition++;
-                        //Debug.Log("Index " + (currentPosition) + " Length " + vvd.vertices[0].Length);
-                        //GameObject vertex = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                        //vertex.transform.position = vertices[l];
-                        //vertex.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
-                        //vertex.transform.parent = meshRepresentation.transform;
+                        GameObject meshRepresentation = new GameObject(model.mdl.bodyParts[i].models[j].theMeshes[k].id.ToString());
+                        meshRepresentation.transform.parent = modelRepresentation.transform;
+
+                        Vector3[] vertices = new Vector3[model.mdl.bodyParts[i].models[j].theMeshes[k].vertexData.lodVertexCount[0]];
+                        Vector3[] normals = new Vector3[model.mdl.bodyParts[i].models[j].theMeshes[k].vertexData.lodVertexCount[0]];
+                        Vector2[] uv = new Vector2[model.mdl.bodyParts[i].models[j].theMeshes[k].vertexData.lodVertexCount[0]];
+                        for (int l = 0; l < vertices.Length; l++)
+                        {
+                            if (currentPosition < model.vvd.vertices[0].Length)
+                                vertices[l] = model.vvd.vertices[0][currentPosition].m_vecPosition;
+                            if (currentPosition < model.vvd.vertices[0].Length)
+                                normals[l] = model.vvd.vertices[0][currentPosition].m_vecNormal;
+                            if (currentPosition < model.vvd.vertices[0].Length)
+                                uv[l] = model.vvd.vertices[0][currentPosition].m_vecTexCoord;
+                            currentPosition++;
+                        }
+
+                        int[] triangles = new int[model.vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices.Length];
+                        for (int l = 0; l < model.vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices.Length; l++)
+                        {
+                            triangles[l + 0] = model.vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxVertices[model.vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices[l + 0]].originalMeshVertexIndex;
+                        }
+
+                        Mesh mesh = new Mesh();
+                        mesh.name = "Custom Mesh";
+                        mesh.vertices = vertices;
+                        mesh.triangles = triangles;
+                        mesh.normals = normals;
+                        mesh.uv = uv;
+                        meshes.Add(mesh);
+
+                        MeshFilter mesher = meshRepresentation.AddComponent<MeshFilter>();
+                        mesher.sharedMesh = mesh;
+
+                        Material meshMaterial = new Material(ApplicationPreferences.playerMaterial);
+                        if (model.modelTextures != null && textureIndex < model.modelTextures.Length) { meshMaterial.mainTexture = model.modelTextures[textureIndex].texture; textureIndex++; }
+                        meshRepresentation.AddComponent<MeshRenderer>().material = meshMaterial;
+                        meshRepresentation.AddComponent<MeshCollider>();
                     }
-
-                    int[] triangles = new int[vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices.Length];
-                    //Debug.Log("Body Parts: " + vtx.bodyParts.Length + " == " + mdl.bodyParts.Length + " Models: " + vtx.bodyParts[i].theVtxModels.Length + " == " + mdl.bodyParts[i].models.Length + " Meshes: " + vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes.Length + " == " + mdl.bodyParts[i].models[j].theMeshes.Length);
-                    int largestIndex = -1;
-                    for (int l = 0; l < vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices.Length; l++)
-                    {
-                        //Debug.Log(l + "/" + vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices.Length + ": " + vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices[l]);
-                        //if (vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices[l] >= vertices.Length) Debug.Log(vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices[l] + " > " + vertices.Length);
-
-                        triangles[l + 0] = vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxVertices[vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices[l + 0]].originalMeshVertexIndex;
-                        //triangles[l + 1] = vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices[l + 1];
-                        //triangles[l + 2] = vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].theVtxIndices[l + 2];
-
-                        largestIndex = triangles[l + 0] > largestIndex ? triangles[l + 0] : largestIndex;
-                        //largestIndex = triangles[l + 1] > largestIndex ? triangles[l + 1] : largestIndex;
-                        //largestIndex = triangles[l + 2] > largestIndex ? triangles[l + 2] : largestIndex;
-                    }
-                    Debug.Log(largestIndex + " == " + (vertices.Length - 1));
-                    //vtx.bodyParts[i].theVtxModels[j].theVtxModelLods[0].theVtxMeshes[k].theVtxStripGroups[0].
-
-                    Mesh mesh = new Mesh();
-                    mesh.name = "Custom Mesh";
-                    mesh.vertices = vertices;
-                    mesh.triangles = triangles;
-                    mesh.normals = normals;
-
-                    MeshFilter mesher = meshRepresentation.AddComponent<MeshFilter>();
-                    mesher.sharedMesh = mesh;
-
-                    Material mapAtlas = new Material(ApplicationPreferences.playerMaterial);
-                    meshRepresentation.AddComponent<MeshRenderer>().material = mapAtlas;
-                    meshRepresentation.AddComponent<MeshCollider>();
                 }
             }
+            model.modelMeshes = meshes.ToArray();
+            #endregion
         }
-        #endregion
 
-        return modelGO;
+        return model;
     }
 
     private void ReadFiles()
@@ -145,5 +179,12 @@ public class SourceModel
             }
         }
         else Debug.Log("One or more files is missing. MDL, VVD, and VTX files are required");
+    }
+
+    public GameObject InstantiateGameObject()
+    {
+        GameObject cloned = Object.Instantiate(modelPrefab);
+        cloned.SetActive(true);
+        return cloned;
     }
 }

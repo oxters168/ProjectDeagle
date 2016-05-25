@@ -14,17 +14,20 @@ public class BSPParser
 
 	public lump_t[] lumps;
 	public object[] lumpData;
+    public dgamelumpheader_t gameLumpHeader;
+    //public dgamelump_t[] gameLumps;
 
-	public BSPParser(Stream stream)
+    public BSPParser(Stream stream)
 	{
 		this.stream = stream;
-		this.lumps = new lump_t[64];
-		this.lumpData = new object[64];
+		lumps = new lump_t[64];
+		lumpData = new object[64];
 
-		this.identifier = FileReader.readInt(stream);
-		this.version = FileReader.readInt(stream);
-		this.LoadLumps();
-		this.mapRevision = FileReader.readInt(stream);
+		identifier = FileReader.readInt(stream);
+		version = FileReader.readInt(stream);
+		LoadLumps();
+        LoadGameLumps();
+		mapRevision = FileReader.readInt(stream);
 
 		Debug.Log("[BSPLoader] File loaded");//, ((BSPRenderer)GameView.instance.BSPRenderer).mapName);
         Debug.Log("[BSPLoader] Identifier: " + identifier);
@@ -44,6 +47,27 @@ public class BSPParser
 			lumps[i] = lump;
 		}
 	}
+    private void LoadGameLumps()
+    {
+        lump_t lump = lumps[35];
+        stream.Position = lump.fileofs;
+
+        //gameLumpHeader = new dgamelumpheader_t();
+        gameLumpHeader.lumpCount = FileReader.readInt(stream);
+        gameLumpHeader.gamelump = new dgamelump_t[gameLumpHeader.lumpCount];
+
+        for(int i = 0; i < gameLumpHeader.gamelump.Length; i++)
+        {
+            gameLumpHeader.gamelump[i] = new dgamelump_t();
+            gameLumpHeader.gamelump[i].id = FileReader.readInt(stream);
+            gameLumpHeader.gamelump[i].flags = FileReader.readUShort(stream);
+            gameLumpHeader.gamelump[i].version = FileReader.readUShort(stream);
+            gameLumpHeader.gamelump[i].fileofs = FileReader.readInt(stream);
+            gameLumpHeader.gamelump[i].filelen = FileReader.readInt(stream);
+        }
+
+        lumpData[35] = gameLumpHeader.gamelump;
+    }
 
     public string GetEntities()
     {
@@ -336,5 +360,120 @@ public class BSPParser
             else textureStringData += TEXTURE_STRING_DATA_SPLITTER;
         }
         return textureStringData;
+    }
+
+    public StaticProps_t GetStaticProps()
+    {
+        dgamelump_t lump = null;
+
+        //Debug.Log("# Game Lumps: " + gameLumpHeader.gamelump.Length);
+        for(int i = 0; i < gameLumpHeader.gamelump.Length; i++)
+        {
+            //Debug.Log("Static Prop Dict Index: " + i + " id: " + gameLumpHeader.gamelump[i].id + " fileofs: " + gameLumpHeader.gamelump[i].fileofs + " filelen: " + gameLumpHeader.gamelump[i].filelen + " version: " + gameLumpHeader.gamelump[i].version);
+            if (gameLumpHeader.gamelump[i].id == 1936749168) { lump = gameLumpHeader.gamelump[i]; }
+        }
+
+        StaticProps_t staticProps = new StaticProps_t();
+        //staticProp.staticPropDict = new StaticPropDictLump_t();
+        if (lump != null)
+        {
+            stream.Position = lump.fileofs;
+
+            #region Dict Lump
+            staticProps.staticPropDict.dictEntries = FileReader.readInt(stream);
+            staticProps.staticPropDict.names = new string[staticProps.staticPropDict.dictEntries];
+
+            for (int i = 0; i < staticProps.staticPropDict.names.Length; i++)
+            {
+                char[] nullPaddedName = new char[128];
+                for (int j = 0; j < nullPaddedName.Length; j++)
+                {
+                    nullPaddedName[j] = FileReader.readChar(stream);
+                }
+                staticProps.staticPropDict.names[i] = new string(nullPaddedName);
+                //Debug.Log(i + ": " + staticProps.staticPropDict.names[i]);
+            }
+            #endregion
+
+            #region Leaf Lump
+            staticProps.staticPropLeaf.leafEntries = FileReader.readInt(stream);
+            staticProps.staticPropLeaf.leaf = new ushort[staticProps.staticPropLeaf.leafEntries];
+
+            for(int i = 0; i < staticProps.staticPropLeaf.leaf.Length; i++)
+            {
+                staticProps.staticPropLeaf.leaf[i] = FileReader.readUShort(stream);
+            }
+            //Debug.Log("Leaf Entries: " + staticProps.staticPropLeaf.leaf.Length);
+            #endregion
+
+            #region Info Lump
+            staticProps.staticPropInfo = new StaticPropLump_t[FileReader.readInt(stream)];
+            //long currentSizeUsed = stream.Position - lump.fileofs;
+            //Debug.Log("Used: " + currentSizeUsed + " Intended Length: " + lump.filelen + " BytesPerInfo: " + ((lump.filelen - currentSizeUsed) / staticProps.staticPropInfo.Length));
+            //int largestIndex = -1;
+            for (int i = 0; i < staticProps.staticPropInfo.Length; i++)
+            {
+                staticProps.staticPropInfo[i].Origin = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));       // origin
+                staticProps.staticPropInfo[i].Origin = new Vector3(staticProps.staticPropInfo[i].Origin.x, staticProps.staticPropInfo[i].Origin.z, staticProps.staticPropInfo[i].Origin.y);
+                staticProps.staticPropInfo[i].Angles = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));       // orientation (pitch roll yaw)
+                //staticProps.staticPropInfo[i].Angles = new Vector3(staticProps.staticPropInfo[i].Angles.x, staticProps.staticPropInfo[i].Angles.z, staticProps.staticPropInfo[i].Angles.y);
+                staticProps.staticPropInfo[i].PropType = FileReader.readUShort(stream);     // index into model name dictionary
+                staticProps.staticPropInfo[i].FirstLeaf = FileReader.readUShort(stream);    // index into leaf array
+                staticProps.staticPropInfo[i].LeafCount = FileReader.readUShort(stream);
+                staticProps.staticPropInfo[i].Solid = FileReader.readByte(stream);         // solidity type
+                staticProps.staticPropInfo[i].Flags = FileReader.readByte(stream);
+                staticProps.staticPropInfo[i].Skin = FileReader.readInt(stream);        // model skin numbers
+                staticProps.staticPropInfo[i].FadeMinDist = FileReader.readFloat(stream);
+                staticProps.staticPropInfo[i].FadeMaxDist = FileReader.readFloat(stream);
+                staticProps.staticPropInfo[i].LightingOrigin = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));  // for lighting
+                                                              // since v5
+                staticProps.staticPropInfo[i].ForcedFadeScale = FileReader.readFloat(stream); // fade distance scale
+                                                              // v6 and v7 only
+                staticProps.staticPropInfo[i].MinDXLevel = FileReader.readUShort(stream);      // minimum DirectX version to be visible
+                staticProps.staticPropInfo[i].MaxDXLevel = FileReader.readUShort(stream);      // maximum DirectX version to be visible
+                                                              // since v8
+                staticProps.staticPropInfo[i].MinCPULevel = FileReader.readByte(stream);
+                staticProps.staticPropInfo[i].MaxCPULevel = FileReader.readByte(stream);
+                staticProps.staticPropInfo[i].MinGPULevel = FileReader.readByte(stream);
+                staticProps.staticPropInfo[i].MaxGPULevel = FileReader.readByte(stream);
+                // since v7
+                staticProps.staticPropInfo[i].DiffuseModulation = new Color32(FileReader.readByte(stream), FileReader.readByte(stream), FileReader.readByte(stream), FileReader.readByte(stream)); // per instance color and alpha modulation
+                                                                // since v10
+                staticProps.staticPropInfo[i].unknown = FileReader.readFloat(stream);
+                // since v9
+                //staticProps.staticPropInfo[i].DisableX360 = Convert.ToBoolean(FileReader.readByte(stream));     // if true, don't show on XBox 360
+
+                //largestIndex = staticProps.staticPropInfo[i].PropType > largestIndex ? staticProps.staticPropInfo[i].PropType : largestIndex;
+
+                #region Full Debug
+                /*Debug.Log(i +
+                    " Origin: " + staticProps.staticPropInfo[i].Origin +
+                    " Angle: " + staticProps.staticPropInfo[i].Angles +
+                    " Prop Type: " + staticProps.staticPropInfo[i].PropType +
+                    " First Leaf: " + staticProps.staticPropInfo[i].FirstLeaf +
+                    " Leaf Count: " + staticProps.staticPropInfo[i].LeafCount + 
+                    " Solid: " + staticProps.staticPropInfo[i].Solid +
+                    " Flags: " + staticProps.staticPropInfo[i].Flags +
+                    " Skin: " + staticProps.staticPropInfo[i].Skin +
+                    " FadeMinDist: " + staticProps.staticPropInfo[i].FadeMinDist +
+                    " FadeMaxDist: " + staticProps.staticPropInfo[i].FadeMaxDist +
+                    " LightingOrigin: " + staticProps.staticPropInfo[i].LightingOrigin +
+                    " ForcedFadeScale: " + staticProps.staticPropInfo[i].ForcedFadeScale +
+                    " MinDXLevel: " + staticProps.staticPropInfo[i].MinDXLevel +
+                    " MaxDXLevel: " + staticProps.staticPropInfo[i].MaxDXLevel +
+                    " MinCPULevel: " + staticProps.staticPropInfo[i].MinCPULevel +
+                    " MaxCPULevel: " + staticProps.staticPropInfo[i].MaxCPULevel +
+                    " MinGPULevel: " + staticProps.staticPropInfo[i].MinGPULevel +
+                    " MaxGPULevel: " + staticProps.staticPropInfo[i].MaxGPULevel +
+                    " DiffuseModulation: " + staticProps.staticPropInfo[i].DiffuseModulation +
+                    " Unknown: " + staticProps.staticPropInfo[i].unknown +
+                    " DisableX360: " + staticProps.staticPropInfo[i].DisableX360);*/
+                #endregion
+            }
+            //Debug.Log("Total Static Props: " + staticProps.staticPropInfo.Length + " Largest index into dict: " + largestIndex);
+            #endregion
+        }
+
+        return staticProps;
     }
 }

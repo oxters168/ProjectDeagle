@@ -79,6 +79,7 @@ public class VVDParser
                     vertices[i][j].m_vecNormal = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
                     vertices[i][j].m_vecNormal = new Vector3(vertices[i][j].m_vecNormal.x, vertices[i][j].m_vecNormal.z, vertices[i][j].m_vecNormal.y);
                     vertices[i][j].m_vecTexCoord = new Vector2(FileReader.readFloat(stream), FileReader.readFloat(stream));
+                    vertices[i][j].m_vecTexCoord = new Vector2(vertices[i][j].m_vecTexCoord.x, 1 - vertices[i][j].m_vecTexCoord.y);
                 }
             }
         }
