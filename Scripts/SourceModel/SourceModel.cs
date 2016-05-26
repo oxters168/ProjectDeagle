@@ -62,7 +62,7 @@ public class SourceModel
                     if (model.mdl.texturePaths != null && model.mdl.texturePaths.Length > 0 && model.mdl.texturePaths[0] != null) texturePath = model.mdl.texturePaths[0];
                     if (model.mdl.textures[i] != null) textureName = model.mdl.textures[i].name;
                     model.modelTextures[i] = SourceTexture.GrabTexture(texturePath + textureName);
-                    Debug.Log("Attempted to grab texture: " + model.modelTextures[i].location);
+                    //Debug.Log("Attempted to grab texture: " + model.modelTextures[i].location);
                 }
             //}
             /*for (int i = 0; i < model.mdl.texturePaths.Length; i++)

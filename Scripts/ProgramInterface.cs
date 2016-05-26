@@ -7,11 +7,8 @@ using System.IO;
 using System.Linq;
 //using Steamworks;
 
-public class ProgramInterface : MonoBehaviour {
-
-    //public const string COMBINE_PREFS = "Combine_Meshes", AVERAGE_PREFS = "Average_Textures", DECREASE_PREFS = "Decrease_Textures", MAX_SIZE = "Max_Texture_Size", MAPS_LOC = "Maps_Location", TEX_LOC = "Textures_Location";
-    //public static bool fullscreen;
-
+public class ProgramInterface : MonoBehaviour
+{
     public enum Menu
     {
         Main = 1,
@@ -23,6 +20,7 @@ public class ProgramInterface : MonoBehaviour {
         Settings,
         MapDir,
         TextureDir,
+        ModelDir,
     }
 
     Menu currentMenu = Menu.Main;
@@ -62,7 +60,6 @@ public class ProgramInterface : MonoBehaviour {
 	void Start ()
     {
         ApplicationPreferences.LoadSavedPreferences();
-        //ApplicationPreferences.fullscreen = Screen.fullScreen;
 
         //if (false && (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor || Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor || Application.platform == RuntimePlatform.LinuxPlayer))
         //{
@@ -109,16 +106,6 @@ public class ProgramInterface : MonoBehaviour {
         }*/
     }
 
-    /*public void LoadPlayerPrefs()
-    {
-        BSPMap.combineMeshes = PlayerPrefs.GetInt(ApplicationPreferences.COMBINE_PREFS) != 0;
-        BSPMap.averageTextures = PlayerPrefs.GetInt(ApplicationPreferences.AVERAGE_PREFS) != 0;
-        BSPMap.decreaseTextureSizes = PlayerPrefs.GetInt(ApplicationPreferences.DECREASE_PREFS) != 0;
-        BSPMap.maxSizeAllowed = PlayerPrefs.GetInt(ApplicationPreferences.MAX_SIZE);
-        BSPMap.mapsDir = PlayerPrefs.GetString(ApplicationPreferences.MAPS_LOC);
-        BSPMap.texturesDir = PlayerPrefs.GetString(ApplicationPreferences.TEX_LOC);
-    }*/
-
     //string demLocation = "/storage/emulated/0/Download/CSGO/replays/Replay1.dem";
     //string demLocation = "C:/Users/Oxters/Downloads/replays/Replay1.dem";
     
@@ -139,6 +126,7 @@ public class ProgramInterface : MonoBehaviour {
         else if (currentMenu == Menu.Settings) SettingsMenu();
         else if (currentMenu == Menu.MapDir) MapDirBrowser();
         else if (currentMenu == Menu.TextureDir) TextureDirBrowser();
+        else if (currentMenu == Menu.ModelDir) ModelDirBrowser();
     }
     private void PlaySplashScreen()
     {
@@ -376,7 +364,7 @@ public class ProgramInterface : MonoBehaviour {
         browseMapsLocationButton = new OxButton("Browse", "MenuButton");
         browseMapsLocationButton.clicked += Button_clicked;
 
-        modelsLocationTextBox = new OxTextBox("", "");
+        modelsLocationTextBox = new OxTextBox(ApplicationPreferences.modelsDir, "");
         modelsLocationTextBox.textChanged += TextBox_textChanged;
         browseModelsLocationButton = new OxButton("Browse", "MenuButton");
         browseModelsLocationButton.clicked += Button_clicked;
@@ -524,6 +512,18 @@ public class ProgramInterface : MonoBehaviour {
 
         //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
+    private void ModelDirBrowser()
+    {
+        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 3f, 4f, 0.6f, 0.8f);
+        float menuWidth = pratio * 3f;
+        float menuHeight = pratio * 4f;
+
+        modelDirChooser.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
+        modelDirChooser.Resize(menuWidth, menuHeight);
+        modelDirChooser.Draw();
+
+        //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
+    }
 
     //string browseMapDir, browseTextureDir;
     void Button_clicked(OxGUI sender)
@@ -657,6 +657,11 @@ public class ProgramInterface : MonoBehaviour {
             textureDirChooser.FillBrowserList(ApplicationPreferences.texturesDir.Substring(0, ApplicationPreferences.texturesDir.Length - 1), false);
             currentMenu = Menu.TextureDir;
         }
+        if(sender == browseModelsLocationButton)
+        {
+            modelDirChooser.FillBrowserList(ApplicationPreferences.modelsDir.Substring(0, ApplicationPreferences.modelsDir.Length - 1), false);
+            currentMenu = Menu.ModelDir;
+        }
         #endregion
 
         #region General Buttons
@@ -764,6 +769,11 @@ public class ProgramInterface : MonoBehaviour {
             ApplicationPreferences.texturesDir = texturesLocationTextBox.text;
             PlayerPrefs.SetString(ApplicationPreferences.TEX_LOC, ApplicationPreferences.texturesDir);
         }
+        if(sender == modelsLocationTextBox)
+        {
+            ApplicationPreferences.modelsDir = modelsLocationTextBox.text;
+            PlayerPrefs.SetString(ApplicationPreferences.MODELS_LOC, ApplicationPreferences.modelsDir);
+        }
         #endregion
     }
     void Chooser_done(OxChooser sender, bool accepted)
@@ -785,6 +795,16 @@ public class ProgramInterface : MonoBehaviour {
                 ApplicationPreferences.texturesDir = textureDirChooser.text + "/";
                 texturesLocationTextBox.text = ApplicationPreferences.texturesDir;
                 PlayerPrefs.SetString(ApplicationPreferences.TEX_LOC, ApplicationPreferences.texturesDir);
+            }
+            currentMenu = Menu.Settings;
+        }
+        if(sender == modelDirChooser)
+        {
+            if(accepted)
+            {
+                ApplicationPreferences.modelsDir = modelDirChooser.text + "/";
+                modelsLocationTextBox.text = ApplicationPreferences.modelsDir;
+                PlayerPrefs.SetString(ApplicationPreferences.MODELS_LOC, ApplicationPreferences.modelsDir);
             }
             currentMenu = Menu.Settings;
         }

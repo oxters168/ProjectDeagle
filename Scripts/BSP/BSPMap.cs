@@ -85,18 +85,15 @@ public class BSPMap
         {
             ReadFile();
 
-            #region Static Props
-            for(int i = 0; i < staticProps.staticPropInfo.Length; i++)
+            #region Load Static Props
+            for(int i = 0; i < staticProps.staticPropDict.names.Length; i++)
             {
-                string modelName = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType], modelLocation = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType];
+                string modelName = staticProps.staticPropDict.names[i], modelLocation = staticProps.staticPropDict.names[i];
                 modelName = modelName.Substring(modelName.LastIndexOf("/") + 1);
                 modelName = modelName.Substring(0, modelName.LastIndexOf("."));
                 modelLocation = modelLocation.Substring(0, modelLocation.LastIndexOf("/"));
 
-                SourceModel propModel = SourceModel.GrabModel(modelName, "C:/Users/oxter/Documents/csgo/" + modelLocation);
-                GameObject propModelGO = propModel.InstantiateGameObject();
-                propModelGO.transform.position = staticProps.staticPropInfo[i].Origin;
-                propModelGO.transform.localRotation = Quaternion.Euler(staticProps.staticPropInfo[i].Angles.x, staticProps.staticPropInfo[i].Angles.y + 180f, staticProps.staticPropInfo[i].Angles.z);
+                SourceModel.GrabModel(modelName, ApplicationPreferences.modelsDir + modelLocation);
             }
             #endregion
 
@@ -142,12 +139,13 @@ public class BSPMap
                     }
 
                     currentFace.mesh = MakeFace(face);
+                    currentFace.localToWorldMatrix = mapGameObject.transform.localToWorldMatrix;
                     allFaces.Add(currentFace);
                 }
             }
             #endregion
 
-            Debug.Log("Parsed " + allFaces.Count + " Faces");
+            //Debug.Log("Parsed " + allFaces.Count + " Faces");
 
             if (!ApplicationPreferences.combineMeshes)
             {
@@ -190,14 +188,64 @@ public class BSPMap
                     }
                     faceGO.AddComponent<MeshRenderer>().material = faceMaterial;
                     #endregion
-
-                    //yield return null;
                 }
 
-                Debug.Log("Made Seperate Meshes");
+                #region Static Props
+                GameObject staticPropsObject = new GameObject("StaticProps");
+                staticPropsObject.transform.parent = mapGameObject.transform;
+                for (int i = 0; i < staticProps.staticPropInfo.Length; i++)
+                {
+                    string modelName = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType], modelLocation = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType];
+                    modelName = modelName.Substring(modelName.LastIndexOf("/") + 1);
+                    modelName = modelName.Substring(0, modelName.LastIndexOf("."));
+                    modelLocation = modelLocation.Substring(0, modelLocation.LastIndexOf("/"));
+
+                    SourceModel propModel = SourceModel.GrabModel(modelName, ApplicationPreferences.modelsDir + modelLocation);
+                    GameObject propModelGO = propModel.InstantiateGameObject();
+                    propModelGO.transform.position = staticProps.staticPropInfo[i].Origin;
+                    propModelGO.transform.localRotation = Quaternion.Euler(staticProps.staticPropInfo[i].Angles.x, staticProps.staticPropInfo[i].Angles.y + 0, staticProps.staticPropInfo[i].Angles.z);
+                    propModelGO.transform.parent = staticPropsObject.transform;
+                }
+                #endregion
+
+                //Debug.Log("Made Seperate Meshes");
             }
             else
             {
+                #region Add Static Prop Meshes to allFaces and mapTextures
+                for (int i = 0; i < staticProps.staticPropInfo.Length; i++)
+                {
+                    string modelName = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType], modelLocation = staticProps.staticPropDict.names[staticProps.staticPropInfo[i].PropType];
+                    modelName = modelName.Substring(modelName.LastIndexOf("/") + 1);
+                    modelName = modelName.Substring(0, modelName.LastIndexOf("."));
+                    modelLocation = modelLocation.Substring(0, modelLocation.LastIndexOf("/"));
+
+                    SourceModel propModel = SourceModel.GrabModel(modelName, ApplicationPreferences.modelsDir + modelLocation);
+                    for (int j = 0; j < propModel.modelMeshes.Length; j++)
+                    {
+                        FaceMesh propMesh = new FaceMesh();
+                        propMesh.mesh = propModel.modelMeshes[j];
+                        if (j < propModel.modelTextures.Length)
+                        {
+                            if (textureLocations.IndexOf(propModel.modelTextures[j].location) < 0)
+                            {
+                                mapTextures.Insert(0, propModel.modelTextures[j]);
+                                textureLocations.Insert(0, propModel.modelTextures[j].location);
+                            }
+                            propMesh.textureLocation = propModel.modelTextures[j].location;
+
+                            #region GameObject for Position and Rotation
+                            GameObject propModelGO = new GameObject("Empty");
+                            propModelGO.transform.position = staticProps.staticPropInfo[i].Origin;
+                            propModelGO.transform.localRotation = Quaternion.Euler(staticProps.staticPropInfo[i].Angles.x, staticProps.staticPropInfo[i].Angles.y + 0, staticProps.staticPropInfo[i].Angles.z);
+                            propMesh.localToWorldMatrix = propModelGO.transform.localToWorldMatrix;
+                            Object.DestroyImmediate(propModelGO);
+                            #endregion
+                        }
+                        allFaces.Add(propMesh);
+                    }
+                }
+                #endregion
                 #region Create Atlas & Remap UVs
                 AtlasMapper customAtlas = new AtlasMapper();
                 if (usingPlainTextures) customAtlas.cushion = 0;
@@ -240,7 +288,7 @@ public class BSPMap
                 int vertexCount = 0;
                 for (int i = 0; i < allFaces.Count; i++)
                 {
-                    if (vertexCount + allFaces[i].mesh.vertices.Length >= System.UInt16.MaxValue)
+                    if (vertexCount + allFaces[i].mesh.vertices.Length >= ushort.MaxValue)
                     {
                         combinesIndices.Add(new List<int>());
                         vertexCount = 0;
@@ -248,8 +296,6 @@ public class BSPMap
 
                     combinesIndices[combinesIndices.Count - 1].Add(i);
                     vertexCount += allFaces[i].mesh.vertices.Length;
-
-                    //yield return null;
                 }
                 #endregion
                 Debug.Log("Calculated Submeshes needed");
@@ -260,9 +306,7 @@ public class BSPMap
                     for (int i = 0; i < currentCombine.Length; i++)
                     {
                         currentCombine[i].mesh = allFaces[combinesIndices[0][i]].mesh;
-                        currentCombine[i].transform = mapGameObject.transform.localToWorldMatrix;
-
-                        //yield return null;
+                        currentCombine[i].transform = allFaces[combinesIndices[0][i]].localToWorldMatrix;
                     }
 
                     Mesh combinedMesh = new Mesh();
@@ -280,8 +324,7 @@ public class BSPMap
                         for (int j = 0; j < currentCombine.Length; j++)
                         {
                             currentCombine[j].mesh = allFaces[combinesIndices[i][j]].mesh;
-                            currentCombine[j].transform = mapGameObject.transform.localToWorldMatrix;
-                            //yield return null;
+                            currentCombine[j].transform = allFaces[combinesIndices[i][j]].localToWorldMatrix;
                         }
 
                         partialMeshes[i] = new GameObject(mapName + " Part " + (i + 1));
@@ -292,12 +335,10 @@ public class BSPMap
                         partialMeshes[i].AddComponent<MeshRenderer>().material = mapAtlas;
                         partialMeshes[i].AddComponent<MeshCollider>();
                         partialMeshes[i].transform.parent = mapGameObject.transform;
-
-                        //yield return null;
                     }
                 }
                 #endregion
-                Debug.Log("Combined Meshes into Submeshes");
+                //Debug.Log("Combined Meshes into Submeshes");
             }
         }
         else
@@ -784,5 +825,6 @@ public class FaceMesh
     public float xOffset, yOffset;
     public string rawTexture, textureLocation;
     public texflags textureFlag = texflags.SURF_NODRAW;
+    public Matrix4x4 localToWorldMatrix;
     //public string textureLocation, materialLocation;
 }
