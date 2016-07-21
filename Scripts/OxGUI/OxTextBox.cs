@@ -1,94 +1,55 @@
 ﻿using UnityEngine;
-using System.Collections;
 
-public class OxTextBox : OxGUI
+namespace OxGUI
 {
-	GUIStyle textBoxStyle;
-    //public string textBoxText;
-    //private bool makeStyle;
-    public event TextChangedEventHandler textChanged;
-
-    public OxTextBox(Vector2 position, Vector2 size, GUIStyle style, string text, string textureLoc) : base(position, size, textureLoc)
+    public class OxTextbox : OxBase
     {
-        if (style != null) textBoxStyle = new GUIStyle(style);
-        this.text = text;
-        //textBoxText = text;
-    }
-    public OxTextBox(Vector2 position, Vector2 size, string text) : this(position, size, null, text, "") { }
-    public OxTextBox(Vector2 position, Vector2 size) : this(position, size, null, "", "") { }
-    public OxTextBox(string text, string texture) : this(new Vector2(0, 0), new Vector2(0, 0), null, text, texture) { }
+        public Font font;
+        public bool multiline = false;
+        public bool wordWrap = false;
+        public TextClipping clipping = TextClipping.Clip;
+        public Vector2 contentOffset;
+        public FontStyle fontStyle;
+        public bool richText;
+        public event OxHelpers.TextChanged textChanged;
 
-    public delegate void TextChangedEventHandler(OxGUI sender);
-    public override void Draw()
-    {
-        base.Draw();
-
-        if (visible)
+        public OxTextbox() : this(Vector2.zero, Vector2.zero, "") { }
+        public OxTextbox(string text) : this(Vector2.zero, Vector2.zero, text) { }
+        public OxTextbox(Vector2 position, Vector2 size) : this(position, size, "") { }
+        public OxTextbox(Vector2 position, Vector2 size, string text) : base(position, size)
         {
-            if (texture.Length > 0)
-            {
-                if (textBoxStyle == null) textBoxStyle = new GUIStyle();
-                if (highlighted) textBoxStyle.normal.background = Resources.Load<Texture2D>(textureLocation + texture + "Hover " + TextureSize());
-                else textBoxStyle.normal.background = Resources.Load<Texture2D>(textureLocation + texture + "Up " + TextureSize());
-                textBoxStyle.hover.background = Resources.Load<Texture2D>(textureLocation + texture + "Hover " + TextureSize());
-                textBoxStyle.active.background = Resources.Load<Texture2D>(textureLocation + texture + "Down " + TextureSize());
-                textBoxStyle.normal.textColor = Color.white;
-                textBoxStyle.hover.textColor = Color.white;
-                textBoxStyle.active.textColor = Color.white;
-                textBoxStyle.alignment = TextAnchor.MiddleLeft;
-                textBoxStyle.clipping = TextClipping.Clip;
-                if (textBoxStyle.clipping == TextClipping.Overflow) textBoxStyle.fontSize = overflowFontSize;
-                else textBoxStyle.fontSize = clippedFontSize;
-                textBoxStyle.padding.left = 9;
-                textBoxStyle.padding.right = 7;
-            }
-            else
-            {
-                if (textBoxStyle == null) textBoxStyle = new GUIStyle(GUI.skin.textField);
-                textBoxStyle.normal.textColor = Color.white;
-                textBoxStyle.hover.textColor = Color.white;
-                textBoxStyle.active.textColor = Color.white;
-                textBoxStyle.alignment = TextAnchor.MiddleLeft;
-                textBoxStyle.clipping = TextClipping.Clip;
-                if (textBoxStyle.clipping == TextClipping.Overflow) textBoxStyle.fontSize = overflowFontSize;
-                else textBoxStyle.fontSize = clippedFontSize;
-                textBoxStyle.padding.left = 9;
-                textBoxStyle.padding.right = 7;
-            }
-
-            string newText = "";
-
-            //if (textBoxStyle != null)
-            //{
-                newText = GUI.TextField(new Rect(position.x, position.y, size.x, size.y), text, textBoxStyle);
-            //}
-            //else
-            //{
-            //    newText = GUI.TextField(new Rect(position.x, position.y, size.x, size.y), text);
-            //}
-
-            if (newText != text)
-            {
-                text = newText;
-                if(textChanged != null) textChanged(this);
-                //return true;
-            }
+            this.text = text;
+            ApplyAppearanceFromResources(this, "Textures/OxGUI/Checkbox", true, true, false);
         }
 
-        //return false;
-    }
+        internal override void TextPaint()
+        {
+            AppearanceInfo dimensions = CurrentAppearanceInfo();
+            GUIStyle textStyle = new GUIStyle();
+            textStyle.font = font;
+            if (manualSizeAllText) textStyle.fontSize = allTextSize;
+            else if (autoSizeAllText) textStyle.fontSize = OxHelpers.CalculateFontSize(OxHelpers.InchesToPixel(new Vector2(0, 0.2f)).y);
+            else if (autoSizeText) textStyle.fontSize = OxHelpers.CalculateFontSize(dimensions.centerHeight);
+            else textStyle.fontSize = textSize;
+            textStyle.normal.textColor = textColor;
+            textStyle.wordWrap = wordWrap;
+            textStyle.alignment = ((TextAnchor)textAlignment);
+            textStyle.clipping = clipping;
+            textStyle.contentOffset = contentOffset;
+            textStyle.fontStyle = fontStyle;
+            textStyle.richText = richText;
 
-    protected override string TextureSize()
-    {
-        string fileEnd = "512x384";
-        float ratio = size.y / size.x;
+            //string shownText = text;
+            if (text.Length <= 0 && value != null) text = value.ToString();
+            string prevText = text;
+            if (multiline) text = GUI.TextArea(new Rect(x + dimensions.leftSideWidth, y + dimensions.topSideHeight, dimensions.centerWidth, dimensions.centerHeight), text, textStyle);
+            else text = GUI.TextField(new Rect(x + dimensions.leftSideWidth, y + dimensions.topSideHeight, dimensions.centerWidth, dimensions.centerHeight), text, textStyle);
+            if (!prevText.Equals(text)) FireTextChangedEvent(prevText);
+        }
 
-        if (ratio <= ((128f + 32f) / 512f)) fileEnd = "512x128";
-        else if (ratio <= ((192f + 32f) / 512f)) fileEnd = "512x192";
-        else if (ratio <= ((256f + 32f) / 512f)) fileEnd = "512x256";
-        else if (ratio <= ((320f + 32f) / 512f)) fileEnd = "512x320";
-        else if (ratio <= ((384f + 32f) / 512f)) fileEnd = "512x384";
-
-        return fileEnd;
+        protected void FireTextChangedEvent(string prevText)
+        {
+            if (textChanged != null) textChanged(this, prevText);
+        }
     }
 }

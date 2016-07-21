@@ -6,23 +6,30 @@ using System.IO;
 
 public class FileReader
 {
-	static Boolean bigEndian = false;
+	static bool bigEndian = false;
 
-	static public byte readByte(Stream stream)
+    public static byte ReadByte(Stream stream)
 	{
 		byte[] buffer = new byte[1];
 		stream.Read(buffer, 0, 1);
 		return buffer[0];
 	}
 
-    static public char readChar(Stream stream)
+    public static byte[] ReadBytes(Stream stream, int amount)
+    {
+        byte[] buffer = new byte[amount];
+        stream.Read(buffer, 0, amount);
+        return buffer;
+    }
+
+    public static char ReadChar(Stream stream)
     {
         byte[] buffer = new byte[2];
         stream.Read(buffer, 0, 1);
         return BitConverter.ToChar(buffer, 0);
     }
 
-	static public short readShort(Stream stream)
+    public static short ReadShort(Stream stream)
 	{
 		byte[] buffer = new byte[2];
 		stream.Read(buffer, 0, 2);
@@ -30,7 +37,7 @@ public class FileReader
 		return BitConverter.ToInt16(buffer, 0);
 	}
 
-	static public ushort readUShort(Stream stream)
+    public static ushort ReadUShort(Stream stream)
 	{
 		byte[] buffer = new byte[2];
 		stream.Read(buffer, 0, 2);
@@ -38,7 +45,7 @@ public class FileReader
 		return BitConverter.ToUInt16(buffer, 0);
 	}
 
-	static public int readInt(Stream stream)
+    public static int ReadInt(Stream stream)
 	{
 		byte[] buffer = new byte[4];
 		stream.Read(buffer, 0, 4);
@@ -46,7 +53,7 @@ public class FileReader
 		return BitConverter.ToInt32(buffer, 0);
 	}
 
-	static public uint readUInt(Stream stream)
+    public static uint ReadUInt(Stream stream)
 	{
 		byte[] buffer = new byte[4];
 		stream.Read(buffer, 0, 4);
@@ -54,7 +61,7 @@ public class FileReader
 		return BitConverter.ToUInt32(buffer, 0);
 	}
 
-	static public long readLong(Stream stream)
+    public static long ReadLong(Stream stream)
 	{
 		byte[] buffer = new byte[8];
 		stream.Read(buffer, 0, 8);
@@ -62,7 +69,7 @@ public class FileReader
 		return BitConverter.ToInt64(buffer, 0);
 	}
 
-	static public float readFloat(Stream stream)
+    public static float ReadFloat(Stream stream)
 	{
 		byte[] buffer = new byte[4];
 		stream.Read(buffer, 0, 4);
@@ -70,17 +77,17 @@ public class FileReader
 		return BitConverter.ToSingle(buffer, 0);
 	}
 
-    static public string readNullTerminatedString(Stream stream)
+    public static string ReadNullTerminatedString(Stream stream)
     {
-        List<char> builtString = new List<char>();
+        string builtString = "";
         char nextChar = '\0';
         do
         {
-            if(stream.CanRead) nextChar = FileReader.readChar(stream);
-            if (nextChar != '\0') builtString.Add(nextChar);
+            if(stream.CanRead) nextChar = ReadChar(stream);
+            if (nextChar != '\0') builtString += nextChar;
         }
         while (nextChar != '\0' && stream.CanRead);
-        if (builtString.Count > 0) return new String(builtString.ToArray());
-        else return null;
+
+        return builtString;
     }
 }

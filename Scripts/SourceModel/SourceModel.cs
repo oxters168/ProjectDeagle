@@ -11,8 +11,8 @@ public class SourceModel
     public string modelLocation { get; private set; }
 
     private GameObject modelPrefab;
-    public Mesh[] modelMeshes;
-    public SourceTexture[] modelTextures;
+    public Mesh[] modelMeshes = new Mesh[0];
+    public SourceTexture[] modelTextures = new SourceTexture[0];
 
     private MDLParser mdl;
     private VVDParser vvd;

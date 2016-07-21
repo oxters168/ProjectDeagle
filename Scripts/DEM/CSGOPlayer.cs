@@ -30,7 +30,7 @@ public class CSGOPlayer : MonoBehaviour {
 	
 	void FixedUpdate ()
     {
-        if (replay != null && playerInfo != null && replay.seekIndex > -1)
+        if (replay != null && playerInfo != null && replay.seekIndex > -1 && replay.seekIndex < playerInfo.statsInTick.Count)
         {
             name = playerInfo.statsInTick[replay.seekIndex].name;
             steamID = playerInfo.statsInTick[replay.seekIndex].steamID;
@@ -242,23 +242,25 @@ public class CSGOPlayer : MonoBehaviour {
             {
                 //GameObject[] ct = Resources.LoadAll<GameObject>("Prefabs/CT");
                 //newAppearance = GameObject.Instantiate(ct[Random.Range(0, ct.Length)]) as GameObject;
-                newAppearance = GameObject.Instantiate(Resources.Load<GameObject>("Prefabs/Faceless")) as GameObject;
+                newAppearance = Instantiate(Resources.Load<GameObject>("Prefabs/Faceless")) as GameObject;
                 teamMaterial.color = ApplicationPreferences.ctColor;
                 Renderer facelessRenderer = newAppearance.GetComponentInChildren<Renderer>();
                 if (facelessRenderer != null) facelessRenderer.material = teamMaterial;
                 newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CustomHumanoidController");
                 newAppearance.GetComponent<Animator>().applyRootMotion = false;
+                newAppearance.GetComponent<Animator>().updateMode = AnimatorUpdateMode.UnscaledTime;
             }
             else if (playerInfo.statsInTick[replay.seekIndex].teamID == replay.demoTicks[replay.seekIndex].tID)
             {
                 //GameObject[] t = Resources.LoadAll<GameObject>("Prefabs/T");
                 //newAppearance = GameObject.Instantiate(t[Random.Range(0, t.Length)]) as GameObject;
-                newAppearance = GameObject.Instantiate(Resources.Load<GameObject>("Prefabs/Faceless")) as GameObject;
+                newAppearance = Instantiate(Resources.Load<GameObject>("Prefabs/Faceless")) as GameObject;
                 teamMaterial.color = ApplicationPreferences.tColor;
                 Renderer facelessRenderer = newAppearance.GetComponentInChildren<Renderer>();
                 if (facelessRenderer != null) facelessRenderer.material = teamMaterial;
                 newAppearance.GetComponent<Animator>().runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("Animation/AnimationControllers/CustomHumanoidController");
                 newAppearance.GetComponent<Animator>().applyRootMotion = false;
+                newAppearance.GetComponent<Animator>().updateMode = AnimatorUpdateMode.UnscaledTime;
             }
             if (newAppearance != null)
             {
@@ -268,7 +270,7 @@ public class CSGOPlayer : MonoBehaviour {
                 shiftSelf.replay = replay;
                 shiftSelf.currentTeam = playerInfo.statsInTick[replay.seekIndex].teamID;
                 replay.playerObjects[playerInfo.key] = shiftSelf;
-                GameObject.DestroyImmediate(gameObject);
+                DestroyImmediate(gameObject);
                 //shiftSelf = this;
                 //GameObject.DestroyImmediate(oldGameObject);
             }
@@ -285,18 +287,21 @@ public class CSGOPlayer : MonoBehaviour {
                 aimIK.solver.poleAxis = Vector3.right;
                 aimIK.solver.poleWeight = 1;
 
-                //aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightShoulder));
-                aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightUpperArm));
-                aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightLowerArm));
-                aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightHand));
-
-                if (aimIK.solver.bones.Length > 0) aimIK.solver.bones[0].weight = 0;
-
                 aimIKTarget = new GameObject(name + " AimIKTarget");
                 aimIK.solver.target = aimIKTarget.transform;
                 aimIKPole = new GameObject(name + " AimIKPole");
                 aimIK.solver.poleTarget = aimIKPole.transform;
             }
+        }
+
+        if (aimIK != null && aimIK.solver.GetRoot() != null && aimIK.solver.bones.Length <= 0)
+        {
+            //aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightShoulder));
+            aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightUpperArm));
+            aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightLowerArm));
+            aimIK.solver.AddBone(animator.GetBoneTransform(HumanBodyBones.RightHand));
+
+            if (aimIK.solver.bones.Length > 0) aimIK.solver.bones[0].weight = 0;
         }
     }
     private void ConfigureAimIK()

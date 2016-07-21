@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -26,7 +25,7 @@ public class Demo
     public bool play;
     public int totalTicks = 0;
     public int seekIndex = 0;
-    public float playSpeed = 0.05f;
+    public float playSpeed = 0.5f;
     private float previousTime = 0f;
     private bool switchedTarget;
     public bool alreadyParsed = false;
@@ -178,7 +177,7 @@ public class Demo
                     gotvReply = new byte[59];
                     gotvSocket.Receive(gotvReply);
 
-                    header = (short) gotvReply[4];
+                    header = gotvReply[4];
                     challengeNum = BitConverter.ToInt32(gotvReply, 5);
                     protocolVersion = BitConverter.ToInt16(gotvReply, 42);
                     //Debug.Log("Connect Reply: " + GetStringUTF16(gotvReply));
@@ -208,7 +207,7 @@ public class Demo
         else if (!alreadyParsed)
         {
             System.IO.FileStream replayFile = new System.IO.FileStream(locationToParse, System.IO.FileMode.Open);
-            demoParser = new DemoInfo.DemoParser(replayFile);
+            demoParser = new DemoParser(replayFile);
             demoParser.TickDone += demoParser_TickDone;
             demoParser.HeaderParsed += demoParser_HeaderParsed;
             demoParser.ParseHeader();

@@ -31,28 +31,28 @@ public class MDLParser {
     {
         header1 = new studiohdr_t();
 
-        header1.id = FileReader.readInt(stream); // Model format ID, such as "IDST" (0x49 0x44 0x53 0x54)
-        header1.version = FileReader.readInt(stream); // Format version number, such as 48 (0x30,0x00,0x00,0x00)
-        header1.checkSum = FileReader.readInt(stream); // this has to be the same in the phy and vtx files to load!
+        header1.id = FileReader.ReadInt(stream); // Model format ID, such as "IDST" (0x49 0x44 0x53 0x54)
+        header1.version = FileReader.ReadInt(stream); // Format version number, such as 48 (0x30,0x00,0x00,0x00)
+        header1.checkSum = FileReader.ReadInt(stream); // this has to be the same in the phy and vtx files to load!
         char[] name = new char[64];
         for (int i = 0; i < name.Length; i++)
         {
-            name[i] = FileReader.readChar(stream);
+            name[i] = FileReader.ReadChar(stream);
         }
         header1.name = name; // The internal name of the model, padding with null bytes.
         // Typically "my_model.mdl" will have an internal name of "my_model"
         this.name = new String(name);
-        header1.dataLength = FileReader.readInt(stream);	// Data size of MDL file in bytes.
+        header1.dataLength = FileReader.ReadInt(stream);	// Data size of MDL file in bytes.
 
         // A vector is 12 bytes, three 4-byte float-values in a row.
-        header1.eyeposition = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream)); // Position of player viewpoint relative to model origin
-        header1.illumposition = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream)); // ?? Presumably the point used for lighting when per-vertex lighting is not enabled.
-        header1.hull_min = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream)); // Corner of model hull box with the least X/Y/Z values
-        header1.hull_max = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream)); // Opposite corner of model hull box
-        header1.view_bbmin = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream)); // View Bounding Box Minimum Position
-        header1.view_bbmax = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream)); // View Bounding Box Maximum Position
+        header1.eyeposition = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream)); // Position of player viewpoint relative to model origin
+        header1.illumposition = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream)); // ?? Presumably the point used for lighting when per-vertex lighting is not enabled.
+        header1.hull_min = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream)); // Corner of model hull box with the least X/Y/Z values
+        header1.hull_max = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream)); // Opposite corner of model hull box
+        header1.view_bbmin = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream)); // View Bounding Box Minimum Position
+        header1.view_bbmax = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream)); // View Bounding Box Maximum Position
 
-        header1.flags = FileReader.readInt(stream); // Binary flags in little-endian order. 
+        header1.flags = FileReader.ReadInt(stream); // Binary flags in little-endian order. 
         // ex (00000001,00000000,00000000,11000000) means flags for position 0, 30, and 31 are set. 
         // Set model flags section for more information
 
@@ -69,84 +69,84 @@ public class MDLParser {
          */
 
         // mstudiobone_t
-        header1.bone_count = FileReader.readInt(stream);	// Number of data sections (of type mstudiobone_t)
-        header1.bone_offset = FileReader.readInt(stream);	// Offset of first data section
+        header1.bone_count = FileReader.ReadInt(stream);	// Number of data sections (of type mstudiobone_t)
+        header1.bone_offset = FileReader.ReadInt(stream);	// Offset of first data section
 
         // mstudiobonecontroller_t
-        header1.bonecontroller_count = FileReader.readInt(stream);
-        header1.bonecontroller_offset = FileReader.readInt(stream);
+        header1.bonecontroller_count = FileReader.ReadInt(stream);
+        header1.bonecontroller_offset = FileReader.ReadInt(stream);
 
         // mstudiohitboxset_t
-        header1.hitbox_count = FileReader.readInt(stream);
-        header1.hitbox_offset = FileReader.readInt(stream);
+        header1.hitbox_count = FileReader.ReadInt(stream);
+        header1.hitbox_offset = FileReader.ReadInt(stream);
 
         // mstudioanimdesc_t
-        header1.localanim_count = FileReader.readInt(stream);
-        header1.localanim_offset = FileReader.readInt(stream);
+        header1.localanim_count = FileReader.ReadInt(stream);
+        header1.localanim_offset = FileReader.ReadInt(stream);
 
         // mstudioseqdesc_t
-        header1.localseq_count = FileReader.readInt(stream);
-        header1.localseq_offset = FileReader.readInt(stream);
+        header1.localseq_count = FileReader.ReadInt(stream);
+        header1.localseq_offset = FileReader.ReadInt(stream);
 
-        header1.activitylistversion = FileReader.readInt(stream); // ??
-        header1.eventsindexed = FileReader.readInt(stream);	// ??
+        header1.activitylistversion = FileReader.ReadInt(stream); // ??
+        header1.eventsindexed = FileReader.ReadInt(stream);	// ??
 
         // VMT texture filenames
         // mstudiotexture_t
-        header1.texture_count = FileReader.readInt(stream);
-        header1.texture_offset = FileReader.readInt(stream);
+        header1.texture_count = FileReader.ReadInt(stream);
+        header1.texture_offset = FileReader.ReadInt(stream);
 
         // This offset points to a series of ints.
         // Each int value, in turn, is an offset relative to the start of this header/the-file,
         // At which there is a null-terminated string.
-        header1.texturedir_count = FileReader.readInt(stream);
-        header1.texturedir_offset = FileReader.readInt(stream);
+        header1.texturedir_count = FileReader.ReadInt(stream);
+        header1.texturedir_offset = FileReader.ReadInt(stream);
 
         // Each skin-family assigns a texture-id to a skin location
-        header1.skinreference_count = FileReader.readInt(stream);
-        header1.skinrfamily_count = FileReader.readInt(stream);
-        header1.skinreference_index = FileReader.readInt(stream);
+        header1.skinreference_count = FileReader.ReadInt(stream);
+        header1.skinrfamily_count = FileReader.ReadInt(stream);
+        header1.skinreference_index = FileReader.ReadInt(stream);
 
         // mstudiobodyparts_t
-        header1.bodypart_count = FileReader.readInt(stream);
-        header1.bodypart_offset = FileReader.readInt(stream);
+        header1.bodypart_count = FileReader.ReadInt(stream);
+        header1.bodypart_offset = FileReader.ReadInt(stream);
 
         // Local attachment points		
         // mstudioattachment_t
-        header1.attachment_count = FileReader.readInt(stream);
-        header1.attachment_offset = FileReader.readInt(stream);
+        header1.attachment_count = FileReader.ReadInt(stream);
+        header1.attachment_offset = FileReader.ReadInt(stream);
 
         // Node values appear to be single bytes, while their names are null-terminated strings.
-        header1.localnode_count = FileReader.readInt(stream);
-        header1.localnode_index = FileReader.readInt(stream);
-        header1.localnode_name_index = FileReader.readInt(stream);
+        header1.localnode_count = FileReader.ReadInt(stream);
+        header1.localnode_index = FileReader.ReadInt(stream);
+        header1.localnode_name_index = FileReader.ReadInt(stream);
 
         // mstudioflexdesc_t
-        header1.flexdesc_count = FileReader.readInt(stream);
-        header1.flexdesc_index = FileReader.readInt(stream);
+        header1.flexdesc_count = FileReader.ReadInt(stream);
+        header1.flexdesc_index = FileReader.ReadInt(stream);
 
         // mstudioflexcontroller_t
-        header1.flexcontroller_count = FileReader.readInt(stream);
-        header1.flexcontroller_index = FileReader.readInt(stream);
+        header1.flexcontroller_count = FileReader.ReadInt(stream);
+        header1.flexcontroller_index = FileReader.ReadInt(stream);
 
         // mstudioflexrule_t
-        header1.flexrules_count = FileReader.readInt(stream);
-        header1.flexrules_index = FileReader.readInt(stream);
+        header1.flexrules_count = FileReader.ReadInt(stream);
+        header1.flexrules_index = FileReader.ReadInt(stream);
 
         // IK probably referse to inverse kinematics
         // mstudioikchain_t
-        header1.ikchain_count = FileReader.readInt(stream);
-        header1.ikchain_index = FileReader.readInt(stream);
+        header1.ikchain_count = FileReader.ReadInt(stream);
+        header1.ikchain_index = FileReader.ReadInt(stream);
 
         // Information about any "mouth" on the model for speech animation
         // More than one sounds pretty creepy.
         // mstudiomouth_t
-        header1.mouths_count = FileReader.readInt(stream);
-        header1.mouths_index = FileReader.readInt(stream);
+        header1.mouths_count = FileReader.ReadInt(stream);
+        header1.mouths_index = FileReader.ReadInt(stream);
 
         // mstudioposeparamdesc_t
-        header1.localposeparam_count = FileReader.readInt(stream);
-        header1.localposeparam_index = FileReader.readInt(stream);
+        header1.localposeparam_count = FileReader.ReadInt(stream);
+        header1.localposeparam_index = FileReader.ReadInt(stream);
 
         /*
          * For anyone trying to follow along, as of this writing,
@@ -156,64 +156,64 @@ public class MDLParser {
         //stream.Position = 308;
 
         // Surface property value (single null-terminated string)
-        header1.surfaceprop_index = FileReader.readInt(stream);
+        header1.surfaceprop_index = FileReader.ReadInt(stream);
 
         // Unusual: In this one index comes first, then count.
         // Key-value data is a series of strings. If you can't find
         // what you're interested in, check the associated PHY file as well.
-        header1.keyvalue_index = FileReader.readInt(stream);
-        header1.keyvalue_count = FileReader.readInt(stream);
+        header1.keyvalue_index = FileReader.ReadInt(stream);
+        header1.keyvalue_count = FileReader.ReadInt(stream);
 
         // More inverse-kinematics
         // mstudioiklock_t
-        header1.iklock_count = FileReader.readInt(stream);
-        header1.iklock_index = FileReader.readInt(stream);
+        header1.iklock_count = FileReader.ReadInt(stream);
+        header1.iklock_index = FileReader.ReadInt(stream);
 
 
-        header1.mass = FileReader.readFloat(stream); // Mass of object (4-bytes)
-        header1.contents = FileReader.readInt(stream); // ??
+        header1.mass = FileReader.ReadFloat(stream); // Mass of object (4-bytes)
+        header1.contents = FileReader.ReadInt(stream); // ??
 
         // Other models can be referenced for re-used sequences and animations
         // (See also: The $includemodel QC option.)
         // mstudiomodelgroup_t
-        header1.includemodel_count = FileReader.readInt(stream);
-        header1.includemodel_index = FileReader.readInt(stream);
+        header1.includemodel_count = FileReader.ReadInt(stream);
+        header1.includemodel_index = FileReader.ReadInt(stream);
 
-        header1.virtualModel = FileReader.readInt(stream); // Placeholder for mutable-void*
+        header1.virtualModel = FileReader.ReadInt(stream); // Placeholder for mutable-void*
 
         // mstudioanimblock_t
-        header1.animblocks_name_index = FileReader.readInt(stream);
-        header1.animblocks_count = FileReader.readInt(stream);
-        header1.animblocks_index = FileReader.readInt(stream);
+        header1.animblocks_name_index = FileReader.ReadInt(stream);
+        header1.animblocks_count = FileReader.ReadInt(stream);
+        header1.animblocks_index = FileReader.ReadInt(stream);
 
-        header1.animblockModel = FileReader.readInt(stream); // Placeholder for mutable-void*
+        header1.animblockModel = FileReader.ReadInt(stream); // Placeholder for mutable-void*
 
         // Points to a series of bytes?
-        header1.bonetablename_index = FileReader.readInt(stream);
+        header1.bonetablename_index = FileReader.ReadInt(stream);
 
-        header1.vertex_base = FileReader.readInt(stream); // Placeholder for void*
-        header1.offset_base = FileReader.readInt(stream); // Placeholder for void*
+        header1.vertex_base = FileReader.ReadInt(stream); // Placeholder for void*
+        header1.offset_base = FileReader.ReadInt(stream); // Placeholder for void*
 
         // Used with $constantdirectionallight from the QC 
         // Model should have flag #13 set if enabled
-        header1.directionaldotproduct = FileReader.readByte(stream);
+        header1.directionaldotproduct = FileReader.ReadByte(stream);
 
-        header1.rootLod = FileReader.readByte(stream); // Preferred rather than clamped
+        header1.rootLod = FileReader.ReadByte(stream); // Preferred rather than clamped
 
         // 0 means any allowed, N means Lod 0 -> (N-1)
-        header1.numAllowedRootLods = FileReader.readByte(stream);
+        header1.numAllowedRootLods = FileReader.ReadByte(stream);
 
         //header.unused; // ??
-        FileReader.readByte(stream);
+        FileReader.ReadByte(stream);
         //header.unused; // ??
-        FileReader.readInt(stream);
+        FileReader.ReadInt(stream);
 
         // mstudioflexcontrollerui_t
-        header1.flexcontrollerui_count = FileReader.readInt(stream);
-        header1.flexcontrollerui_index = FileReader.readInt(stream);
+        header1.flexcontrollerui_count = FileReader.ReadInt(stream);
+        header1.flexcontrollerui_index = FileReader.ReadInt(stream);
 
-        header1.vertAnimFixedPointScale = FileReader.readFloat(stream);
-        header1.surfacePropLookup = FileReader.readInt(stream);
+        header1.vertAnimFixedPointScale = FileReader.ReadFloat(stream);
+        header1.surfacePropLookup = FileReader.ReadInt(stream);
 
         /**
          * Offset for additional header information.
@@ -221,10 +221,10 @@ public class MDLParser {
          * follows this studiohdr_t
          */
         // studiohdr2_t
-        header1.studiohdr2index = FileReader.readInt(stream);
+        header1.studiohdr2index = FileReader.ReadInt(stream);
 
         //header.unused; // ??
-        FileReader.readInt(stream);
+        FileReader.ReadInt(stream);
 
         return header1;
     }
@@ -232,20 +232,20 @@ public class MDLParser {
     {
         header2 = new studiohdr2_t();
 
-        header2.srcbonetransform_count = FileReader.readInt(stream);
-        header2.srcbonetransform_index = FileReader.readInt(stream);
-        header2.illumpositionattachmentindex = FileReader.readInt(stream);
-        header2.flMaxEyeDeflection = FileReader.readFloat(stream);
-        header2.linearbone_index = FileReader.readInt(stream);
+        header2.srcbonetransform_count = FileReader.ReadInt(stream);
+        header2.srcbonetransform_index = FileReader.ReadInt(stream);
+        header2.illumpositionattachmentindex = FileReader.ReadInt(stream);
+        header2.flMaxEyeDeflection = FileReader.ReadFloat(stream);
+        header2.linearbone_index = FileReader.ReadInt(stream);
 
-        header2.sznameindex = FileReader.readInt(stream);
-        header2.m_nBoneFlexDriverCount = FileReader.readInt(stream);
-        header2.m_nBoneFlexDriverIndex = FileReader.readInt(stream);
+        header2.sznameindex = FileReader.ReadInt(stream);
+        header2.m_nBoneFlexDriverCount = FileReader.ReadInt(stream);
+        header2.m_nBoneFlexDriverIndex = FileReader.ReadInt(stream);
 
         int[] reserved = new int[56];
         for (int i = 0; i < reserved.Length; i++)
         {
-            reserved[i] = FileReader.readInt(stream);
+            reserved[i] = FileReader.ReadInt(stream);
         }
         header2.reserved = reserved;
 
@@ -266,48 +266,48 @@ public class MDLParser {
 
                 bones[i] = new mstudiobone_t();
 
-                bones[i].nameOffset = FileReader.readInt(stream);
-                bones[i].parentBoneIndex = FileReader.readInt(stream);
+                bones[i].nameOffset = FileReader.ReadInt(stream);
+                bones[i].parentBoneIndex = FileReader.ReadInt(stream);
                 //stream.Position += 150;
                 bones[i].boneControllerIndex = new int[6];
                 for (int j = 0; j < bones[i].boneControllerIndex.Length; j++)
                 {
-                    bones[i].boneControllerIndex[j] = FileReader.readInt(stream);
+                    bones[i].boneControllerIndex[j] = FileReader.ReadInt(stream);
                 }
                 //FileReader.readInt(stream);
-                bones[i].position = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
-                bones[i].quat = new Quaternion(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
+                bones[i].position = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
+                bones[i].quat = new Quaternion(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
                 if (header1.version != 2531)
                 {
-                    bones[i].rotation = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
-                    bones[i].positionScale = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
-                    bones[i].rotationScale = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
+                    bones[i].rotation = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
+                    bones[i].positionScale = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
+                    bones[i].rotationScale = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
                 }
                 //FileReader.readInt(stream);
-                float[] columnExes = new float[4] { FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream) };
-                float[] columnWise = new float[4] { FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream) };
-                float[] columnZees = new float[4] { FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream) };
+                float[] columnExes = new float[4] { FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream) };
+                float[] columnWise = new float[4] { FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream) };
+                float[] columnZees = new float[4] { FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream) };
 
                 bones[i].poseToBoneColumn0 = new Vector3(columnExes[0], columnWise[0], columnZees[0]);
                 bones[i].poseToBoneColumn1 = new Vector3(columnExes[1], columnWise[1], columnZees[1]);
                 bones[i].poseToBoneColumn2 = new Vector3(columnExes[2], columnWise[2], columnZees[2]);
                 bones[i].poseToBoneColumn3 = new Vector3(columnExes[3], columnWise[3], columnZees[3]);
 
-                if(header1.version != 2531) bones[i].qAlignment = new Quaternion(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
+                if(header1.version != 2531) bones[i].qAlignment = new Quaternion(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
 
-                bones[i].flags = FileReader.readInt(stream);
+                bones[i].flags = FileReader.ReadInt(stream);
 
-                bones[i].proceduralRuleType = FileReader.readInt(stream);
-                bones[i].proceduralRuleOffset = FileReader.readInt(stream);
-                bones[i].physicsBoneIndex = FileReader.readInt(stream);
-                bones[i].surfacePropNameOffset = FileReader.readInt(stream);
-                bones[i].contents = FileReader.readInt(stream);
+                bones[i].proceduralRuleType = FileReader.ReadInt(stream);
+                bones[i].proceduralRuleOffset = FileReader.ReadInt(stream);
+                bones[i].physicsBoneIndex = FileReader.ReadInt(stream);
+                bones[i].surfacePropNameOffset = FileReader.ReadInt(stream);
+                bones[i].contents = FileReader.ReadInt(stream);
 
                 if (header1.version != 2531)
                 {
                     for (int j = 0; j < 8; j++)
                     {
-                        FileReader.readInt(stream);
+                        FileReader.ReadInt(stream);
                     }
                 }
 
@@ -316,14 +316,14 @@ public class MDLParser {
                 if (bones[i].nameOffset != 0)
                 {
                     stream.Position = bonePosition + bones[i].nameOffset;
-                    bones[i].name = FileReader.readNullTerminatedString(stream);
+                    bones[i].name = FileReader.ReadNullTerminatedString(stream);
                 }
                 else bones[i].name = "";
 
                 if (bones[i].surfacePropNameOffset != 0)
                 {
                     stream.Position = bonePosition + bones[i].surfacePropNameOffset;
-                    bones[i].theSurfacePropName = FileReader.readNullTerminatedString(stream);
+                    bones[i].theSurfacePropName = FileReader.ReadNullTerminatedString(stream);
                 }
                 else bones[i].theSurfacePropName = "";
             }
@@ -346,17 +346,17 @@ public class MDLParser {
 
                 bodyParts[i] = new mstudiobodyparts_t();
 
-                bodyParts[i].nameOffset = FileReader.readInt(stream);
-                bodyParts[i].modelCount = FileReader.readInt(stream);
-                bodyParts[i].theBase = FileReader.readInt(stream);
-                bodyParts[i].modelOffset = FileReader.readInt(stream);
+                bodyParts[i].nameOffset = FileReader.ReadInt(stream);
+                bodyParts[i].modelCount = FileReader.ReadInt(stream);
+                bodyParts[i].theBase = FileReader.ReadInt(stream);
+                bodyParts[i].modelOffset = FileReader.ReadInt(stream);
 
                 nextBodyPartPosition = stream.Position;
 
                 if (bodyParts[i].nameOffset != 0)
                 {
                     stream.Position = bodyPartPosition + bodyParts[i].nameOffset;
-                    bodyParts[i].name = FileReader.readNullTerminatedString(stream);
+                    bodyParts[i].name = FileReader.ReadNullTerminatedString(stream);
                 }
                 else bodyParts[i].name = "";
 
@@ -382,28 +382,28 @@ public class MDLParser {
                 bodyPart.models[i].name = new char[64];
                 for (int j = 0; j < bodyPart.models[i].name.Length; j++)
                 {
-                    bodyPart.models[i].name[j] = FileReader.readChar(stream);
+                    bodyPart.models[i].name[j] = FileReader.ReadChar(stream);
                 }
-                bodyPart.models[i].type = FileReader.readInt(stream);
-                bodyPart.models[i].boundingRadius = FileReader.readFloat(stream);
-                bodyPart.models[i].meshCount = FileReader.readInt(stream);
-                bodyPart.models[i].meshOffset = FileReader.readInt(stream);
-                bodyPart.models[i].vertexCount = FileReader.readInt(stream);
-                bodyPart.models[i].vertexOffset = FileReader.readInt(stream);
-                bodyPart.models[i].tangentOffset = FileReader.readInt(stream);
-                bodyPart.models[i].attachmentCount = FileReader.readInt(stream);
-                bodyPart.models[i].attachmentOffset = FileReader.readInt(stream);
-                bodyPart.models[i].eyeballCount = FileReader.readInt(stream);
-                bodyPart.models[i].eyeballOffset = FileReader.readInt(stream);
+                bodyPart.models[i].type = FileReader.ReadInt(stream);
+                bodyPart.models[i].boundingRadius = FileReader.ReadFloat(stream);
+                bodyPart.models[i].meshCount = FileReader.ReadInt(stream);
+                bodyPart.models[i].meshOffset = FileReader.ReadInt(stream);
+                bodyPart.models[i].vertexCount = FileReader.ReadInt(stream);
+                bodyPart.models[i].vertexOffset = FileReader.ReadInt(stream);
+                bodyPart.models[i].tangentOffset = FileReader.ReadInt(stream);
+                bodyPart.models[i].attachmentCount = FileReader.ReadInt(stream);
+                bodyPart.models[i].attachmentOffset = FileReader.ReadInt(stream);
+                bodyPart.models[i].eyeballCount = FileReader.ReadInt(stream);
+                bodyPart.models[i].eyeballOffset = FileReader.ReadInt(stream);
 
                 bodyPart.models[i].vertexData = new mstudio_modelvertexdata_t();
-                bodyPart.models[i].vertexData.vertexDataP = FileReader.readInt(stream);
-                bodyPart.models[i].vertexData.tangentDataP = FileReader.readInt(stream);
+                bodyPart.models[i].vertexData.vertexDataP = FileReader.ReadInt(stream);
+                bodyPart.models[i].vertexData.tangentDataP = FileReader.ReadInt(stream);
 
                 bodyPart.models[i].unused = new int[8];
                 for (int j = 0; j < bodyPart.models[i].unused.Length; j++)
                 {
-                    bodyPart.models[i].unused[j] = FileReader.readInt(stream);
+                    bodyPart.models[i].unused[j] = FileReader.ReadInt(stream);
                 }
 
                 nextModelPosition = stream.Position;
@@ -427,57 +427,57 @@ public class MDLParser {
 
                 model.theEyeballs[i] = new mstudioeyeball_t();
 
-                model.theEyeballs[i].nameOffset = FileReader.readInt(stream);
-                model.theEyeballs[i].boneIndex = FileReader.readInt(stream);
-                model.theEyeballs[i].org = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
-                model.theEyeballs[i].zOffset = FileReader.readFloat(stream);
-                model.theEyeballs[i].radius = FileReader.readFloat(stream);
-                model.theEyeballs[i].up = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
-                model.theEyeballs[i].forward = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
-                model.theEyeballs[i].texture = FileReader.readInt(stream);
+                model.theEyeballs[i].nameOffset = FileReader.ReadInt(stream);
+                model.theEyeballs[i].boneIndex = FileReader.ReadInt(stream);
+                model.theEyeballs[i].org = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
+                model.theEyeballs[i].zOffset = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].radius = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].up = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
+                model.theEyeballs[i].forward = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
+                model.theEyeballs[i].texture = FileReader.ReadInt(stream);
 
-                model.theEyeballs[i].unused1 = FileReader.readInt(stream);
-                model.theEyeballs[i].irisScale = FileReader.readFloat(stream);
-                model.theEyeballs[i].unused2 = FileReader.readInt(stream);
+                model.theEyeballs[i].unused1 = FileReader.ReadInt(stream);
+                model.theEyeballs[i].irisScale = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].unused2 = FileReader.ReadInt(stream);
 
                 model.theEyeballs[i].upperFlexDesc = new int[3];
                 model.theEyeballs[i].lowerFlexDesc = new int[3];
                 model.theEyeballs[i].upperTarget = new double[3];
                 model.theEyeballs[i].lowerTarget = new double[3];
 
-                model.theEyeballs[i].upperFlexDesc[0] = FileReader.readInt(stream);
-                model.theEyeballs[i].upperFlexDesc[1] = FileReader.readInt(stream);
-                model.theEyeballs[i].upperFlexDesc[2] = FileReader.readInt(stream);
-                model.theEyeballs[i].lowerFlexDesc[0] = FileReader.readInt(stream);
-                model.theEyeballs[i].lowerFlexDesc[1] = FileReader.readInt(stream);
-                model.theEyeballs[i].lowerFlexDesc[2] = FileReader.readInt(stream);
-                model.theEyeballs[i].upperTarget[0] = FileReader.readFloat(stream);
-                model.theEyeballs[i].upperTarget[1] = FileReader.readFloat(stream);
-                model.theEyeballs[i].upperTarget[2] = FileReader.readFloat(stream);
-                model.theEyeballs[i].lowerTarget[0] = FileReader.readFloat(stream);
-                model.theEyeballs[i].lowerTarget[1] = FileReader.readFloat(stream);
-                model.theEyeballs[i].lowerTarget[2] = FileReader.readFloat(stream);
+                model.theEyeballs[i].upperFlexDesc[0] = FileReader.ReadInt(stream);
+                model.theEyeballs[i].upperFlexDesc[1] = FileReader.ReadInt(stream);
+                model.theEyeballs[i].upperFlexDesc[2] = FileReader.ReadInt(stream);
+                model.theEyeballs[i].lowerFlexDesc[0] = FileReader.ReadInt(stream);
+                model.theEyeballs[i].lowerFlexDesc[1] = FileReader.ReadInt(stream);
+                model.theEyeballs[i].lowerFlexDesc[2] = FileReader.ReadInt(stream);
+                model.theEyeballs[i].upperTarget[0] = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].upperTarget[1] = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].upperTarget[2] = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].lowerTarget[0] = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].lowerTarget[1] = FileReader.ReadFloat(stream);
+                model.theEyeballs[i].lowerTarget[2] = FileReader.ReadFloat(stream);
 
-                model.theEyeballs[i].upperLidFlexDesc = FileReader.readInt(stream);
-                model.theEyeballs[i].lowerLidFlexDesc = FileReader.readInt(stream);
+                model.theEyeballs[i].upperLidFlexDesc = FileReader.ReadInt(stream);
+                model.theEyeballs[i].lowerLidFlexDesc = FileReader.ReadInt(stream);
 
                 model.theEyeballs[i].unused = new int[4];
                 for (int j = 0; j < model.theEyeballs[i].unused.Length; j++)
                 {
-                    model.theEyeballs[i].unused[j] = FileReader.readInt(stream);
+                    model.theEyeballs[i].unused[j] = FileReader.ReadInt(stream);
                 }
 
-                model.theEyeballs[i].eyeballIsNonFacs = FileReader.readByte(stream);
+                model.theEyeballs[i].eyeballIsNonFacs = FileReader.ReadByte(stream);
 
                 model.theEyeballs[i].unused3 = new char[3];
                 for (int j = 0; j < model.theEyeballs[i].unused3.Length; j++)
                 {
-                    model.theEyeballs[i].unused3[j] = FileReader.readChar(stream);
+                    model.theEyeballs[i].unused3[j] = FileReader.ReadChar(stream);
                 }
                 model.theEyeballs[i].unused4 = new int[7];
                 for (int j = 0; j < model.theEyeballs[i].unused4.Length; j++)
                 {
-                    model.theEyeballs[i].unused4[j] = FileReader.readInt(stream);
+                    model.theEyeballs[i].unused4[j] = FileReader.ReadInt(stream);
                 }
 
                 //Set the default value to -1 to distinguish it from value assigned to it by ReadMeshes()
@@ -489,7 +489,7 @@ public class MDLParser {
                 {
                     stream.Position = eyeballPosition + model.theEyeballs[i].nameOffset;
 
-                    model.theEyeballs[i].name = FileReader.readNullTerminatedString(stream);
+                    model.theEyeballs[i].name = FileReader.ReadNullTerminatedString(stream);
                 }
                 else model.theEyeballs[i].name = "";
             }
@@ -509,29 +509,29 @@ public class MDLParser {
 
                 model.theMeshes[i] = new mstudiomesh_t();
 
-                model.theMeshes[i].materialIndex = FileReader.readInt(stream);
-                model.theMeshes[i].modelOffset = FileReader.readInt(stream);
-                model.theMeshes[i].vertexCount = FileReader.readInt(stream);
-                model.theMeshes[i].vertexIndexStart = FileReader.readInt(stream);
-                model.theMeshes[i].flexCount = FileReader.readInt(stream);
-                model.theMeshes[i].flexOffset = FileReader.readInt(stream);
-                model.theMeshes[i].materialType = FileReader.readInt(stream);
-                model.theMeshes[i].materialParam = FileReader.readInt(stream);
-                model.theMeshes[i].id = FileReader.readInt(stream);
-                model.theMeshes[i].center = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
+                model.theMeshes[i].materialIndex = FileReader.ReadInt(stream);
+                model.theMeshes[i].modelOffset = FileReader.ReadInt(stream);
+                model.theMeshes[i].vertexCount = FileReader.ReadInt(stream);
+                model.theMeshes[i].vertexIndexStart = FileReader.ReadInt(stream);
+                model.theMeshes[i].flexCount = FileReader.ReadInt(stream);
+                model.theMeshes[i].flexOffset = FileReader.ReadInt(stream);
+                model.theMeshes[i].materialType = FileReader.ReadInt(stream);
+                model.theMeshes[i].materialParam = FileReader.ReadInt(stream);
+                model.theMeshes[i].id = FileReader.ReadInt(stream);
+                model.theMeshes[i].center = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
 
                 model.theMeshes[i].vertexData = new mstudio_meshvertexdata_t();
-                model.theMeshes[i].vertexData.modelVertexDataP = FileReader.readInt(stream);
+                model.theMeshes[i].vertexData.modelVertexDataP = FileReader.ReadInt(stream);
                 model.theMeshes[i].vertexData.lodVertexCount = new int[8];
                 for (int j = 0; j < model.theMeshes[i].vertexData.lodVertexCount.Length; j++)
                 {
-                    model.theMeshes[i].vertexData.lodVertexCount[j] = FileReader.readInt(stream);
+                    model.theMeshes[i].vertexData.lodVertexCount[j] = FileReader.ReadInt(stream);
                 }
 
                 model.theMeshes[i].unused = new int[8];
                 for (int j = 0; j < model.theMeshes[i].unused.Length; j++)
                 {
-                    model.theMeshes[i].unused[j] = FileReader.readInt(stream);
+                    model.theMeshes[i].unused[j] = FileReader.ReadInt(stream);
                 }
 
                 if (model.theMeshes[i].materialType == 1)
@@ -578,39 +578,39 @@ public class MDLParser {
                     attachments[i].builtName = new char[32];
                     for (int j = 0; j < attachments[i].builtName.Length; j++)
                     {
-                        attachments[i].builtName[j] = FileReader.readChar(stream);
+                        attachments[i].builtName[j] = FileReader.ReadChar(stream);
                     }
-                    attachments[i].type = FileReader.readInt(stream);
-                    attachments[i].bone = FileReader.readInt(stream);
+                    attachments[i].type = FileReader.ReadInt(stream);
+                    attachments[i].bone = FileReader.ReadInt(stream);
 
-                    attachments[i].attachmentPoint = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
+                    attachments[i].attachmentPoint = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
                     attachments[i].vectors = new Vector3[3];
                     for (int j = 0; j < attachments[i].vectors.Length; j++)
                     {
-                        attachments[i].vectors[j] = new Vector3(FileReader.readFloat(stream), FileReader.readFloat(stream), FileReader.readFloat(stream));
+                        attachments[i].vectors[j] = new Vector3(FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream));
                     }
                 }
                 else
                 {
-                    attachments[i].nameOffset = FileReader.readInt(stream);
-                    attachments[i].flags = FileReader.readInt(stream);
-                    attachments[i].localBoneIndex = FileReader.readInt(stream);
-                    attachments[i].localM11 = FileReader.readFloat(stream);
-                    attachments[i].localM12 = FileReader.readFloat(stream);
-                    attachments[i].localM13 = FileReader.readFloat(stream);
-                    attachments[i].localM14 = FileReader.readFloat(stream);
-                    attachments[i].localM21 = FileReader.readFloat(stream);
-                    attachments[i].localM22 = FileReader.readFloat(stream);
-                    attachments[i].localM23 = FileReader.readFloat(stream);
-                    attachments[i].localM24 = FileReader.readFloat(stream);
-                    attachments[i].localM31 = FileReader.readFloat(stream);
-                    attachments[i].localM32 = FileReader.readFloat(stream);
-                    attachments[i].localM33 = FileReader.readFloat(stream);
-                    attachments[i].localM34 = FileReader.readFloat(stream);
+                    attachments[i].nameOffset = FileReader.ReadInt(stream);
+                    attachments[i].flags = FileReader.ReadInt(stream);
+                    attachments[i].localBoneIndex = FileReader.ReadInt(stream);
+                    attachments[i].localM11 = FileReader.ReadFloat(stream);
+                    attachments[i].localM12 = FileReader.ReadFloat(stream);
+                    attachments[i].localM13 = FileReader.ReadFloat(stream);
+                    attachments[i].localM14 = FileReader.ReadFloat(stream);
+                    attachments[i].localM21 = FileReader.ReadFloat(stream);
+                    attachments[i].localM22 = FileReader.ReadFloat(stream);
+                    attachments[i].localM23 = FileReader.ReadFloat(stream);
+                    attachments[i].localM24 = FileReader.ReadFloat(stream);
+                    attachments[i].localM31 = FileReader.ReadFloat(stream);
+                    attachments[i].localM32 = FileReader.ReadFloat(stream);
+                    attachments[i].localM33 = FileReader.ReadFloat(stream);
+                    attachments[i].localM34 = FileReader.ReadFloat(stream);
                     attachments[i].unused = new int[8];
                     for (int j = 0; j < attachments[i].unused.Length; j++)
                     {
-                        attachments[i].unused[j] = FileReader.readInt(stream);
+                        attachments[i].unused[j] = FileReader.ReadInt(stream);
                     }
                 }
 
@@ -619,7 +619,7 @@ public class MDLParser {
                 if (attachments[i].nameOffset != 0)
                 {
                     stream.Position = attachmentPosition + attachments[i].nameOffset;
-                    attachments[i].name = FileReader.readNullTerminatedString(stream);
+                    attachments[i].name = FileReader.ReadNullTerminatedString(stream);
                 }
             }
         }
@@ -640,36 +640,36 @@ public class MDLParser {
                 stream.Position = nextAnimDescPosition;
                 long animDescPosition = nextAnimDescPosition;
 
-                animDescs[i].baseHeaderOffset = FileReader.readInt(stream);
-                animDescs[i].nameOffset = FileReader.readInt(stream);
-                animDescs[i].fps = FileReader.readFloat(stream);
-                animDescs[i].flags = FileReader.readInt(stream);
-                animDescs[i].frameCount = FileReader.readInt(stream);
-                animDescs[i].movementCount = FileReader.readInt(stream);
-                animDescs[i].movementOffset = FileReader.readInt(stream);
+                animDescs[i].baseHeaderOffset = FileReader.ReadInt(stream);
+                animDescs[i].nameOffset = FileReader.ReadInt(stream);
+                animDescs[i].fps = FileReader.ReadFloat(stream);
+                animDescs[i].flags = FileReader.ReadInt(stream);
+                animDescs[i].frameCount = FileReader.ReadInt(stream);
+                animDescs[i].movementCount = FileReader.ReadInt(stream);
+                animDescs[i].movementOffset = FileReader.ReadInt(stream);
 
-                animDescs[i].ikRuleZeroFrameOffset = FileReader.readInt(stream);
+                animDescs[i].ikRuleZeroFrameOffset = FileReader.ReadInt(stream);
 
                 animDescs[i].unused1 = new int[5];
                 for (int j = 0; j < animDescs[i].unused1.Length; j++)
                 {
-                    animDescs[i].unused1[j] = FileReader.readInt(stream);
+                    animDescs[i].unused1[j] = FileReader.ReadInt(stream);
                 }
 
-                animDescs[i].animBlock = FileReader.readInt(stream);
-                animDescs[i].animOffset = FileReader.readInt(stream);
-                animDescs[i].ikRuleCount = FileReader.readInt(stream);
-                animDescs[i].ikRuleOffset = FileReader.readInt(stream);
-                animDescs[i].animblockIkRuleOffset = FileReader.readInt(stream);
-                animDescs[i].localHierarchyCount = FileReader.readInt(stream);
-                animDescs[i].localHierarchyOffset = FileReader.readInt(stream);
-                animDescs[i].sectionOffset = FileReader.readInt(stream);
-                animDescs[i].sectionFrameCount = FileReader.readInt(stream);
+                animDescs[i].animBlock = FileReader.ReadInt(stream);
+                animDescs[i].animOffset = FileReader.ReadInt(stream);
+                animDescs[i].ikRuleCount = FileReader.ReadInt(stream);
+                animDescs[i].ikRuleOffset = FileReader.ReadInt(stream);
+                animDescs[i].animblockIkRuleOffset = FileReader.ReadInt(stream);
+                animDescs[i].localHierarchyCount = FileReader.ReadInt(stream);
+                animDescs[i].localHierarchyOffset = FileReader.ReadInt(stream);
+                animDescs[i].sectionOffset = FileReader.ReadInt(stream);
+                animDescs[i].sectionFrameCount = FileReader.ReadInt(stream);
 
-                animDescs[i].spanFrameCount = FileReader.readShort(stream);
-                animDescs[i].spanCount = FileReader.readShort(stream);
-                animDescs[i].spanOffset = FileReader.readInt(stream);
-                animDescs[i].spanStallTime = FileReader.readFloat(stream);
+                animDescs[i].spanFrameCount = FileReader.ReadShort(stream);
+                animDescs[i].spanCount = FileReader.ReadShort(stream);
+                animDescs[i].spanOffset = FileReader.ReadInt(stream);
+                animDescs[i].spanStallTime = FileReader.ReadFloat(stream);
 
                 nextAnimDescPosition = stream.Position;
                 if (i == 0) animDescFileByteSize = nextAnimDescPosition - animDescPosition;
@@ -677,7 +677,7 @@ public class MDLParser {
                 if (animDescs[i].nameOffset != 0)
                 {
                     stream.Position = animDescPosition + animDescs[i].nameOffset;
-                    animDescs[i].name = FileReader.readNullTerminatedString(stream);
+                    animDescs[i].name = FileReader.ReadNullTerminatedString(stream);
                 }
                 else animDescs[i].name = "";
             }
@@ -746,8 +746,8 @@ public class MDLParser {
         stream.Position = sectionPosition;
 
         mstudioanimsections_t animSection = new mstudioanimsections_t();
-        animSection.animBlock = FileReader.readInt(stream);
-        animSection.animOffset = FileReader.readInt(stream);
+        animSection.animBlock = FileReader.ReadInt(stream);
+        animSection.animOffset = FileReader.ReadInt(stream);
         animDesc.sections.Add(animSection);
     }
     private void ParseMdlAnimation(long animPosition, mstudioanimdesc_t animDesc, int sectionFrameCount, List<mstudioanim_t> sectionOfAnims)
@@ -769,17 +769,17 @@ public class MDLParser {
 
                 textures[i] = new mstudiotexture_t();
 
-                textures[i].nameOffset = FileReader.readInt(stream);
-                textures[i].flags = FileReader.readInt(stream);
-                textures[i].used = FileReader.readInt(stream);
-                textures[i].unused1 = FileReader.readInt(stream);
-                textures[i].materialP = FileReader.readInt(stream);
-                textures[i].clientMaterialP = FileReader.readInt(stream);
+                textures[i].nameOffset = FileReader.ReadInt(stream);
+                textures[i].flags = FileReader.ReadInt(stream);
+                textures[i].used = FileReader.ReadInt(stream);
+                textures[i].unused1 = FileReader.ReadInt(stream);
+                textures[i].materialP = FileReader.ReadInt(stream);
+                textures[i].clientMaterialP = FileReader.ReadInt(stream);
 
                 textures[i].unused = new int[10];
                 for (int j = 0; j < textures[i].unused.Length; j++)
                 {
-                    textures[i].unused[j] = FileReader.readInt(stream);
+                    textures[i].unused[j] = FileReader.ReadInt(stream);
                 }
 
                 nextTexturePosition = stream.Position;
@@ -787,7 +787,7 @@ public class MDLParser {
                 if (textures[i].nameOffset != 0)
                 {
                     stream.Position = texturePosition + textures[i].nameOffset;
-                    textures[i].name = FileReader.readNullTerminatedString(stream);
+                    textures[i].name = FileReader.ReadNullTerminatedString(stream);
                 }
                 else textures[i].name = "";
             }
@@ -805,14 +805,14 @@ public class MDLParser {
             for (int i = 0; i < texturePaths.Length; i++)
             {
                 stream.Position = nextTextureDirPosition;
-                int texturePathPosition = FileReader.readInt(stream);
+                int texturePathPosition = FileReader.ReadInt(stream);
 
                 nextTextureDirPosition = stream.Position;
 
                 if (texturePathPosition != 0)
                 {
                     stream.Position = texturePathPosition;
-                    texturePaths[i] = FileReader.readNullTerminatedString(stream);
+                    texturePaths[i] = FileReader.ReadNullTerminatedString(stream);
                 }
                 else texturePaths[i] = "";
             }

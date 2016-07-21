@@ -22,16 +22,16 @@ public class VTXParser
     {
         header = new vtxheader_t();
 
-        header.version = FileReader.readInt(stream);
-        header.vertCacheSize = FileReader.readInt(stream);
-        header.maxBonesPerStrip = FileReader.readUShort(stream);
-        header.maxBonesPerFace = FileReader.readUShort(stream);
-        header.maxBonesPerVert = FileReader.readInt(stream);
-        header.checkSum = FileReader.readInt(stream);
-        header.numLODs = FileReader.readInt(stream);
-        header.materialReplacementListOffset = FileReader.readInt(stream);
-        header.numBodyParts = FileReader.readInt(stream);
-        header.bodyPartOffset = FileReader.readInt(stream);
+        header.version = FileReader.ReadInt(stream);
+        header.vertCacheSize = FileReader.ReadInt(stream);
+        header.maxBonesPerStrip = FileReader.ReadUShort(stream);
+        header.maxBonesPerFace = FileReader.ReadUShort(stream);
+        header.maxBonesPerVert = FileReader.ReadInt(stream);
+        header.checkSum = FileReader.ReadInt(stream);
+        header.numLODs = FileReader.ReadInt(stream);
+        header.materialReplacementListOffset = FileReader.ReadInt(stream);
+        header.numBodyParts = FileReader.ReadInt(stream);
+        header.bodyPartOffset = FileReader.ReadInt(stream);
 
         return header;
     }
@@ -56,8 +56,8 @@ public class VTXParser
                 bodyPartInputFileStreamPosition = stream.Position;
 
                 bodyParts[i] = new SourceVtxBodyPart();
-                bodyParts[i].modelCount = FileReader.readInt(stream);
-                bodyParts[i].modelOffset = FileReader.readInt(stream);
+                bodyParts[i].modelCount = FileReader.ReadInt(stream);
+                bodyParts[i].modelOffset = FileReader.ReadInt(stream);
 
                 inputFileStreamPosition = stream.Position;
 
@@ -84,8 +84,8 @@ public class VTXParser
         {
             modelInputFileStreamPosition = stream.Position;
             aBodyPart.theVtxModels[i] = new SourceVtxModel();
-            aBodyPart.theVtxModels[i].lodCount = FileReader.readInt(stream);
-            aBodyPart.theVtxModels[i].lodOffset = FileReader.readInt(stream);
+            aBodyPart.theVtxModels[i].lodCount = FileReader.ReadInt(stream);
+            aBodyPart.theVtxModels[i].lodOffset = FileReader.ReadInt(stream);
 
             inputFileStreamPosition = stream.Position;
             if (aBodyPart.theVtxModels[i].lodCount > 0 && aBodyPart.theVtxModels[i].lodOffset != 0)
@@ -108,9 +108,9 @@ public class VTXParser
         {
             modelLodInputFileStreamPosition = stream.Position;
             aModel.theVtxModelLods[i] = new SourceVtxModelLod();
-            aModel.theVtxModelLods[i].meshCount = FileReader.readInt(stream);
-            aModel.theVtxModelLods[i].meshOffset = FileReader.readInt(stream);
-            aModel.theVtxModelLods[i].switchPoint = FileReader.readFloat(stream);
+            aModel.theVtxModelLods[i].meshCount = FileReader.ReadInt(stream);
+            aModel.theVtxModelLods[i].meshOffset = FileReader.ReadInt(stream);
+            aModel.theVtxModelLods[i].switchPoint = FileReader.ReadFloat(stream);
 
             inputFileStreamPosition = stream.Position;
             if (aModel.theVtxModelLods[i].meshCount > 0 && aModel.theVtxModelLods[i].meshOffset != 0)
@@ -132,9 +132,9 @@ public class VTXParser
         {
             meshInputFileStreamPosition = stream.Position;
             aModelLod.theVtxMeshes[i] = new SourceVtxMesh();
-            aModelLod.theVtxMeshes[i].stripGroupCount = FileReader.readInt(stream);
-            aModelLod.theVtxMeshes[i].stripGroupOffset = FileReader.readInt(stream);
-            aModelLod.theVtxMeshes[i].flags = FileReader.readByte(stream);
+            aModelLod.theVtxMeshes[i].stripGroupCount = FileReader.ReadInt(stream);
+            aModelLod.theVtxMeshes[i].stripGroupOffset = FileReader.ReadInt(stream);
+            aModelLod.theVtxMeshes[i].flags = FileReader.ReadByte(stream);
 
             inputFileStreamPosition = stream.Position;
             if (aModelLod.theVtxMeshes[i].stripGroupCount > 0 && aModelLod.theVtxMeshes[i].stripGroupOffset != 0)
@@ -177,13 +177,13 @@ public class VTXParser
         for (int i = 0; i < aMesh.theVtxStripGroups.Length; i++)
         {
             aMesh.theVtxStripGroups[i] = new SourceVtxStripGroup();
-            aMesh.theVtxStripGroups[i].vertexCount = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].vertexOffset = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].indexCount = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].indexOffset = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].stripCount = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].stripOffset = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].flags = FileReader.readByte(stream);
+            aMesh.theVtxStripGroups[i].vertexCount = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].vertexOffset = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].indexCount = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].indexOffset = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].stripCount = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].stripOffset = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].flags = FileReader.ReadByte(stream);
         }
         theExpectedStartOfSecondStripGroupList = stream.Position;
     }
@@ -198,18 +198,18 @@ public class VTXParser
         {
             stripGroupInputFileStreamPosition = stream.Position;
             aMesh.theVtxStripGroups[i] = new SourceVtxStripGroup();
-            aMesh.theVtxStripGroups[i].vertexCount = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].vertexOffset = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].indexCount = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].indexOffset = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].stripCount = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].stripOffset = FileReader.readInt(stream);
-            aMesh.theVtxStripGroups[i].flags = FileReader.readByte(stream);
+            aMesh.theVtxStripGroups[i].vertexCount = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].vertexOffset = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].indexCount = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].indexOffset = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].stripCount = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].stripOffset = FileReader.ReadInt(stream);
+            aMesh.theVtxStripGroups[i].flags = FileReader.ReadByte(stream);
 
             if (theStripGroupUsesExtra8Bytes)
             {
-                FileReader.readInt(stream);
-                FileReader.readInt(stream);
+                FileReader.ReadInt(stream);
+                FileReader.ReadInt(stream);
             }
 
             inputFileStreamPosition = stream.Position;
@@ -238,16 +238,16 @@ public class VTXParser
             aStripGroup.theVtxVertices[i].boneWeightIndex = new byte[VVDParser.MAX_NUM_BONES_PER_VERT];
             for (int j = 0; j < aStripGroup.theVtxVertices[i].boneWeightIndex.Length; j++)
             {
-                aStripGroup.theVtxVertices[i].boneWeightIndex[j] = FileReader.readByte(stream);
+                aStripGroup.theVtxVertices[i].boneWeightIndex[j] = FileReader.ReadByte(stream);
             }
 
-            aStripGroup.theVtxVertices[i].boneCount = FileReader.readByte(stream);
-            aStripGroup.theVtxVertices[i].originalMeshVertexIndex = FileReader.readUShort(stream);
+            aStripGroup.theVtxVertices[i].boneCount = FileReader.ReadByte(stream);
+            aStripGroup.theVtxVertices[i].originalMeshVertexIndex = FileReader.ReadUShort(stream);
 
             aStripGroup.theVtxVertices[i].boneId = new byte[VVDParser.MAX_NUM_BONES_PER_VERT];
             for (int j = 0; j < aStripGroup.theVtxVertices[i].boneId.Length; j++)
             {
-                aStripGroup.theVtxVertices[i].boneId[j] = FileReader.readByte(stream);
+                aStripGroup.theVtxVertices[i].boneId[j] = FileReader.ReadByte(stream);
             }
         }
     }
@@ -257,7 +257,7 @@ public class VTXParser
         aStripGroup.theVtxIndices = new ushort[aStripGroup.indexCount];
         for (int i = 0; i < aStripGroup.theVtxIndices.Length; i++)
         {
-            aStripGroup.theVtxIndices[i] = FileReader.readUShort(stream);
+            aStripGroup.theVtxIndices[i] = FileReader.ReadUShort(stream);
         }
     }
     private void ReadSourceVtxStrips(long stripGroupInputFileStreamPosition, SourceVtxStripGroup aStripGroup)
@@ -267,14 +267,14 @@ public class VTXParser
         for (int i = 0; i < aStripGroup.theVtxStrips.Length; i++)
         {
             aStripGroup.theVtxStrips[i] = new SourceVtxStrip();
-            aStripGroup.theVtxStrips[i].indexCount = FileReader.readInt(stream);
-            aStripGroup.theVtxStrips[i].indexMeshIndex = FileReader.readInt(stream);
-            aStripGroup.theVtxStrips[i].vertexCount = FileReader.readInt(stream);
-            aStripGroup.theVtxStrips[i].vertexMeshIndex = FileReader.readInt(stream);
-            aStripGroup.theVtxStrips[i].boneCount = FileReader.readShort(stream);
-            aStripGroup.theVtxStrips[i].flags = FileReader.readByte(stream);
-            aStripGroup.theVtxStrips[i].boneStateChangeCount = FileReader.readInt(stream);
-            aStripGroup.theVtxStrips[i].boneStateChangeOffset = FileReader.readInt(stream);
+            aStripGroup.theVtxStrips[i].indexCount = FileReader.ReadInt(stream);
+            aStripGroup.theVtxStrips[i].indexMeshIndex = FileReader.ReadInt(stream);
+            aStripGroup.theVtxStrips[i].vertexCount = FileReader.ReadInt(stream);
+            aStripGroup.theVtxStrips[i].vertexMeshIndex = FileReader.ReadInt(stream);
+            aStripGroup.theVtxStrips[i].boneCount = FileReader.ReadShort(stream);
+            aStripGroup.theVtxStrips[i].flags = FileReader.ReadByte(stream);
+            aStripGroup.theVtxStrips[i].boneStateChangeCount = FileReader.ReadInt(stream);
+            aStripGroup.theVtxStrips[i].boneStateChangeOffset = FileReader.ReadInt(stream);
         }
     }
 }

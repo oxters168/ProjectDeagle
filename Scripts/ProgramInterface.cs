@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
+using OxGUI;
 using System.Collections;
 using System.Collections.Generic;
 using DemoInfo;
 using System;
-using System.IO;
 using System.Linq;
 //using Steamworks;
 
@@ -24,30 +24,36 @@ public class ProgramInterface : MonoBehaviour
     }
 
     Menu currentMenu = Menu.Main;
-    OxMenu mainMenu, settingsMenu;
+    OxMenu mainMenu;
+    OxTabbedPanel settingsMenu;
+    OxCheckbox manualFontSizeCheckbox;
+    //OxPanel manualFontPanel;
+    OxTextbox manualFontSizeBox;
+    OxScrollbar manualFontSizeScroll;
     OxButton viewLiveButton, viewReplaysButton, viewMapsButton, settingsButton, exitButton;
     OxMenu liveMenu;
-    OxTextBox addressBox;
+    OxTextbox addressBox;
     OxButton connectButton;
-    OxSplit replaysMenu, replayChooserStatsSplitter, replayFilesChooserBackSplitter, replayStatsButtonsSplitter;
-    OxMenu loadedReplayButtonMenu, importReplayButtonMenu;
-    OxList replayFileList, loadedReplayList;
+    OxPanel replaysMenu;
+    OxListFileSelector replayFileList;
+    OxMenu loadedReplayList;
     OxButton importReplayButton, watchReplayButton, removeReplayButton;
-    OxSplit replayInterface, exploreInterface;
+    OxWindow replayInterface, exploreInterface;
     //OxWindow interfaceControlWindow;
-    OxList playerList;
-    OxSlider replaySeeker;
+    OxMenu playerList;
+    OxScrollbar replaySeeker;
     OxButton playButton;
-    OxSplit mapMenu, mapChooserSplit, mapButtonSplit, navButtonSplit;
-    OxList mapFileChooser;
+    OxPanel mapMenu;
+    OxListFileSelector mapFileChooser;
     OxButton loadMapButton, nextMapButton, prevMapButton, exploreMapButton;
-    OxCheckBox fullscreenCheckBox, averageTexturesCheckBox, decreaseTexturesCheckBox, combineMeshesCheckBox;
-    OxLabel maxTextureSizeLabel, texturesLocationLabel, mapsLocationLabel, modelsLocationLabel, sfxLocationLabel;
-    OxTextBox maxTextureSizeTextBox, texturesLocationTextBox, mapsLocationTextBox, modelsLocationTextBox, sfxLocationTextBox;
+    OxCheckbox fullscreenCheckBox, averageTexturesCheckBox, decreaseTexturesCheckBox, combineMeshesCheckBox;
+    //OxLabel maxTextureSizeLabel, texturesLocationLabel, mapsLocationLabel, modelsLocationLabel, sfxLocationLabel;
+    OxTextbox maxTextureSizeTextBox, texturesLocationTextBox, mapsLocationTextBox, modelsLocationTextBox, sfxLocationTextBox;
     OxButton browseTexturesLocationButton, browseMapsLocationButton, browseModelsLocationButton, browseSFXLocationButton;
-    OxChooser textureDirChooser, mapDirChooser, modelDirChooser, sfxDirChooser;
-    OxButton backButton;
+    OxListFileSelectorPrompt textureDirChooser, mapDirChooser, modelDirChooser, sfxDirChooser;
+    //OxButton liveMenuBackButton, replaysMenuBackButton, replayInterfaceBackButton, mapsMenuBackButton, exploreInterfaceBackButton, settingsMenuBackButton;
     //Replay aReplay;
+    public Texture2D loaded;
 
     private bool showSplash = true;
     private int splashFrame = 1;
@@ -59,7 +65,9 @@ public class ProgramInterface : MonoBehaviour
 	// Use this for initialization
 	void Start ()
     {
+        OxBase.autoSizeAllText = true;
         ApplicationPreferences.LoadSavedPreferences();
+        SourceTexture.LoadDefaults();
 
         //if (false && (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor || Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor || Application.platform == RuntimePlatform.LinuxPlayer))
         //{
@@ -67,6 +75,7 @@ public class ProgramInterface : MonoBehaviour
         //}
         MakeMenus();
 
+        ParseVPK(Environment.GetEnvironmentVariable("PROGRAMFILES(X86)").Replace("\\", "/") + "/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk");
         //Demo.ConvertToHexString("Ahmed");
         //VPKParser vpkTest = new VPKParser(new FileStream("D:/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk", FileMode.Open));
         //Debug.Log(vpkTest.Parse());
@@ -74,11 +83,6 @@ public class ProgramInterface : MonoBehaviour
         //ParseVVD();
         //ParseModel("ctm_fbi", "C:/Users/oxter/Documents/csgo/models/player/");
 	}
-
-    private void ParseModel(string name, string location)
-    {
-        SourceModel model = SourceModel.GrabModel(name, location);
-    }
 
     // Update is called once per frame
     void Update()
@@ -89,7 +93,7 @@ public class ProgramInterface : MonoBehaviour
             RefreshPlayerList();
             if (replaySeeker != null)
             {
-                replaySeeker.SetValue(((float) currentReplay.seekIndex) / currentReplay.totalTicks);
+                replaySeeker.progress = (((float) currentReplay.seekIndex) / currentReplay.totalTicks);
                 replaySeeker.text = currentReplay.seekIndex.ToString();
             }
         }
@@ -106,9 +110,25 @@ public class ProgramInterface : MonoBehaviour
         }*/
     }
 
+    private void ParseModel(string name, string location)
+    {
+        SourceModel.GrabModel(name, location);
+    }
+    private void ParseVPK(string location)
+    {
+        VPKParser vpk = new VPKParser(location);
+        vpk.Parse();
+        //loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/de_nuke/nukfloorc_detaile.vtf"));
+        loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/brick/infwllb_overlay_b.vtf"));
+        //loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/brick/brickwall031b_snow.vtf"));
+        //loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/ads/ad01.vtf"));
+        //System.IO.File.WriteAllBytes("C:/Users/oxter/Documents/ad01.vtf", vpk.LoadFile("/materials/ads/ad01.vtf"));
+        //System.IO.File.WriteAllBytes("C:/Users/oxter/Documents/opera.wav", vpk.LoadFile("/sound/ambient/opera.wav"));
+    }
+
     //string demLocation = "/storage/emulated/0/Download/CSGO/replays/Replay1.dem";
     //string demLocation = "C:/Users/Oxters/Downloads/replays/Replay1.dem";
-    
+
     void OnGUI()
     {
         if (showSplash)
@@ -161,372 +181,453 @@ public class ProgramInterface : MonoBehaviour
 
     private void MakeMenus()
     {
-        backButton = new OxButton("Back", "MenuButton");
-        backButton.clicked += Button_clicked;
-
         #region Main Menu
-        mainMenu = new OxMenu(false);
-        viewLiveButton = new OxButton("Live", "MenuButton");
-        viewReplaysButton = new OxButton("Replays", "MenuButton");
-        viewMapsButton = new OxButton("Maps", "MenuButton");
-        settingsButton = new OxButton("Settings", "MenuButton");
-        exitButton = new OxButton("Exit", "MenuButton");
+        mainMenu = new OxMenu(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        mainMenu.Reposition(new Vector2((Screen.width / 2f) - (mainMenu.width / 2f), (Screen.height / 2f) - (mainMenu.height / 2f)));
+
+        viewLiveButton = new OxButton("Live");
+        viewReplaysButton = new OxButton("Replays");
+        viewMapsButton = new OxButton("Maps");
+        settingsButton = new OxButton("Settings");
+        exitButton = new OxButton("Exit");
         viewLiveButton.clicked += Button_clicked;
         viewReplaysButton.clicked += Button_clicked;
         viewMapsButton.clicked += Button_clicked;
         settingsButton.clicked += Button_clicked;
         exitButton.clicked += Button_clicked;
-        mainMenu.AddItem(viewLiveButton, viewReplaysButton, viewMapsButton, settingsButton, exitButton);
+        mainMenu.AddItems(viewLiveButton, viewReplaysButton, viewMapsButton, settingsButton, exitButton);
+        mainMenu.itemsShown = mainMenu.itemsCount;
         #endregion
 
         #region Live Menu
-        liveMenu = new OxMenu(false);
-        addressBox = new OxTextBox("127.0.0.1", "");
-        connectButton = new OxButton("Connect", "MenuButton");
+        liveMenu = new OxMenu(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        liveMenu.Reposition(new Vector2((Screen.width / 2f) - (liveMenu.width / 2f), (Screen.height / 2f) - (liveMenu.height / 2f)));
+
+        addressBox = new OxTextbox("127.0.0.1");
+        connectButton = new OxButton("Connect");
+        OxButton liveMenuBackButton = new OxButton("Back");
+
+        liveMenu.AddItems(addressBox, connectButton, liveMenuBackButton);
+        liveMenu.itemsShown = liveMenu.itemsCount;
+
+        liveMenuBackButton.clicked += Button_clicked;
         connectButton.clicked += Button_clicked;
-        liveMenu.AddItem(addressBox, connectButton, backButton);
+
+        liveMenuBackButton.elementFunction = OxHelpers.ElementType.Back;
         #endregion
 
         #region Replays Menu
-        replaysMenu = new OxSplit();
-        replayChooserStatsSplitter = new OxSplit();
-        replayFilesChooserBackSplitter = new OxSplit();
-        replayStatsButtonsSplitter = new OxSplit();
-        replayFileList = new OxList();
-        loadedReplayList = new OxList();
-        loadedReplayButtonMenu = new OxMenu(true);
-        importReplayButtonMenu = new OxMenu(false);
-        importReplayButton = new OxButton("Import", "MenuButton");
-        watchReplayButton = new OxButton("Watch", "MenuButton");
-        removeReplayButton = new OxButton("Remove", "MenuButton");
+        replaysMenu = new OxPanel(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(7, 5), new Vector2(0.9f, 0.7f)));
+        replaysMenu.Reposition(new Vector2((Screen.width / 2f) - (replaysMenu.width / 2f), (Screen.height / 2f) - (replaysMenu.height / 2f)));
 
-        importReplayButton.clicked += Button_clicked;
+        replayFileList = new OxListFileSelector();
+        loadedReplayList = new OxMenu();
+        watchReplayButton = new OxButton("Watch");
+        importReplayButton = new OxButton("Import");
+        removeReplayButton = new OxButton("Remove");
+        OxButton replaysMenuBackButton = new OxButton("Back");
+
         watchReplayButton.clicked += Button_clicked;
+        importReplayButton.clicked += Button_clicked;
         removeReplayButton.clicked += Button_clicked;
+        replaysMenuBackButton.clicked += Button_clicked;
+        replaysMenu.AddItems(replayFileList, loadedReplayList, watchReplayButton, importReplayButton, removeReplayButton, replaysMenuBackButton);
 
-        replaysMenu.division = 0.7f;
-        replaysMenu.westPercentSize = 0.9f;
-        replaysMenu.westComponent = replayChooserStatsSplitter;
-        replaysMenu.eastComponent = replayFilesChooserBackSplitter;
-        replayFilesChooserBackSplitter.horizontal = false;
-        replayFilesChooserBackSplitter.division = 0.75f;
-        replayFilesChooserBackSplitter.eastPercentSize = 0.9f;
-        replayFilesChooserBackSplitter.westComponent = replayFileList;
-        replayFilesChooserBackSplitter.eastComponent = importReplayButtonMenu;
-        importReplayButtonMenu.AddItem(importReplayButton, backButton);
-        replayChooserStatsSplitter.horizontal = false;
-        replayChooserStatsSplitter.division = 0.2f;
-        replayChooserStatsSplitter.westComponent = loadedReplayList;
-        replayChooserStatsSplitter.eastComponent = replayStatsButtonsSplitter;
+        AppearanceInfo dimensions = replaysMenu.CurrentAppearanceInfo();
+        replaysMenuBackButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        replaysMenuBackButton.position = new Vector2(dimensions.centerWidth - replaysMenuBackButton.width, dimensions.centerHeight - replaysMenuBackButton.height);
+        replaysMenuBackButton.elementFunction = OxHelpers.ElementType.Back;
+        replaysMenuBackButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Right);
+
+        removeReplayButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        removeReplayButton.position = new Vector2(dimensions.centerWidth - removeReplayButton.width, dimensions.centerHeight - removeReplayButton.height - replaysMenuBackButton.height);
+        removeReplayButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Right);
+
+        importReplayButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        importReplayButton.position = new Vector2(dimensions.centerWidth - importReplayButton.width, dimensions.centerHeight - removeReplayButton.height - importReplayButton.height - replaysMenuBackButton.height);
+        importReplayButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Right);
+
+        replayFileList.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight - replaysMenuBackButton.height - removeReplayButton.height - importReplayButton.height);
+        replayFileList.position = new Vector2(dimensions.centerWidth - replayFileList.width, 0);
+        replayFileList.AddExtensions("dem");
+        replayFileList.anchor = (OxHelpers.Anchor.Right | OxHelpers.Anchor.Top | OxHelpers.Anchor.Bottom);
+
         loadedReplayList.horizontal = true;
-        replayStatsButtonsSplitter.horizontal = false;
-        replayStatsButtonsSplitter.division = 0.8f;
-        replayStatsButtonsSplitter.westComponent = new OxLabel();
-        replayStatsButtonsSplitter.eastComponent = loadedReplayButtonMenu;
-        loadedReplayButtonMenu.AddItem(watchReplayButton, removeReplayButton);
+        loadedReplayList.size = new Vector2(dimensions.centerWidth - replayFileList.width, dimensions.centerHeight * 0.2f);
+        loadedReplayList.position = Vector2.zero;
+        loadedReplayList.anchor = (OxHelpers.Anchor.Left | OxHelpers.Anchor.Right | OxHelpers.Anchor.Top);
 
-        replayFileList.FillBrowserList("", true, "dem");
-        //replaysMenu = new OxMenu(false);
-        //replaysMenu.AddItem(backButton);
+        watchReplayButton.size = new Vector2(dimensions.centerWidth * 0.1f, removeReplayButton.height + importReplayButton.height);
+        watchReplayButton.position = new Vector2(((dimensions.centerWidth - removeReplayButton.width) / 2f) - (watchReplayButton.width / 2f), dimensions.centerHeight - watchReplayButton.height);
+        watchReplayButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Left);
         #endregion
 
         #region Replay Interface
-        replayInterface = new OxSplit();
-        OxSplit lowerInterfaceSplit = new OxSplit(), lowerInterfaceSecondSplit = new OxSplit();
-        OxSplit playerListSplit = new OxSplit(), mediaControlsSplit = new OxSplit(), centerPlayButtonSplit = new OxSplit(), playButtonSplit = new OxSplit();
-        playerList = new OxList();
-        playerList.indexChanged += playerList_indexChanged;
-        //interfaceControlWindow = new OxWindow();
+        replayInterface = new OxWindow(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(5, 2), new Vector2(0.5f, 0.2f)));
+        replayInterface.Reposition(new Vector2((Screen.width / 2f) - (replayInterface.width / 2f), (Screen.height) - (replayInterface.height) - 10));
+
+        playerList = new OxMenu();
         playButton = new OxButton("Play");
+        replaySeeker = new OxScrollbar();
+        OxButton replayInterfaceBackButton = new OxButton("Back");
+
+        replayInterface.AddItems(playerList, playButton, replaySeeker, replayInterfaceBackButton);
+
+        playerList.selectionChanged += playerList_selectionChanged;
         playButton.clicked += Button_clicked;
-        replaySeeker = new OxSlider();
-        replaySeeker.valueChanged += replaySeeker_valueChanged;
-        //seekButton = new OxButton("");
-        replayInterface.horizontal = false;
-        replayInterface.division = 0.6f;
-        replayInterface.eastComponent = lowerInterfaceSplit;
-        replayInterface.westComponent = new OxLabel();
-        lowerInterfaceSplit.division = 0.75f;
-        lowerInterfaceSplit.eastPercentSize = 0.25f;
-        lowerInterfaceSplit.eastComponent = backButton;
-        lowerInterfaceSplit.westComponent = lowerInterfaceSecondSplit;
-        lowerInterfaceSecondSplit.division = 0.33f;
-        lowerInterfaceSecondSplit.eastComponent = playerListSplit;
-        lowerInterfaceSecondSplit.westComponent = new OxLabel();
-        //interfaceControlWindow.showMinimizeButton = false;
-        //interfaceControlWindow.showMaximizeButton = false;
-        //interfaceControlWindow.showCloseButton = false;
-        //interfaceControlWindow.layout = mediaControlsSplit;
-        playerListSplit.horizontal = false;
-        playerListSplit.division = 0.9f;
-        playerListSplit.westComponent = mediaControlsSplit;
-        playerListSplit.eastComponent = playerList;
+        replaySeeker.scrollValueChanged += replaySeeker_valueChanged;
+        replayInterfaceBackButton.clicked += Button_clicked;
+
+        dimensions = replayInterface.CurrentAppearanceInfo();
+        replayInterfaceBackButton.size = new Vector2(dimensions.centerHeight * 0.3f, dimensions.centerHeight * 0.3f);
+        replayInterfaceBackButton.position = new Vector2(dimensions.centerWidth - replayInterfaceBackButton.width - 5, dimensions.centerHeight - replayInterfaceBackButton.height - 5);
+        replayInterfaceBackButton.elementFunction = OxHelpers.ElementType.Back;
+        replayInterfaceBackButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Right);
+
+        replaySeeker.size = new Vector2(dimensions.centerWidth * 0.9f, dimensions.centerHeight * 0.3f);
+        replaySeeker.position = new Vector2((dimensions.centerWidth / 2f) - (replaySeeker.width / 2f), 5);
+        replaySeeker.anchor = (OxHelpers.Anchor.Top | OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
+
+        playButton.size = new Vector2(dimensions.centerHeight * 0.15f, dimensions.centerHeight * 0.15f);
+        playButton.position = new Vector2((dimensions.centerWidth / 2f) - (playButton.width / 2f), (dimensions.centerHeight / 2f) - (playButton.height / 2f));
+        playButton.anchor = (OxHelpers.Anchor.Top | OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
+
         playerList.horizontal = true;
-        mediaControlsSplit.horizontal = false;
-        mediaControlsSplit.division = 0.1f;
-        mediaControlsSplit.eastComponent = centerPlayButtonSplit;
-        mediaControlsSplit.westComponent = replaySeeker;
-        centerPlayButtonSplit.division = 0.3f;
-        centerPlayButtonSplit.eastComponent = playButtonSplit;
-        centerPlayButtonSplit.westComponent = new OxLabel();
-        playButtonSplit.division = 0.6f;
-        playButtonSplit.westPercentSize = 0.5f;
-        playButtonSplit.eastComponent = new OxLabel();
-        playButtonSplit.westComponent = playButton;
+        playerList.size = new Vector2((dimensions.centerWidth - replayInterfaceBackButton.width) * 0.9f, dimensions.centerHeight * 0.3f);
+        playerList.position = new Vector2(((dimensions.centerWidth - replayInterfaceBackButton.width - 5) / 2f) - (playerList.width / 2f), dimensions.centerHeight - playerList.height - 5);
+        playerList.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
         #endregion
 
         #region Maps Menu
-        //mapMenu, mapChooserSplit, mapButtonSplit
-        mapMenu = new OxSplit();
-        mapChooserSplit = new OxSplit();
-        mapButtonSplit = new OxSplit();
-        navButtonSplit = new OxSplit();
-        OxSplit buttonSplitWithEmpty = new OxSplit();
-        OxSplit navGapSplit = new OxSplit();
-        mapFileChooser = new OxList();
-        loadMapButton = new OxButton("Import Map", "MenuButton");
-        nextMapButton = new OxButton("Next", "MenuButton");
-        prevMapButton = new OxButton("Previous", "MenuButton");
-        exploreMapButton = new OxButton("Explore", "MenuButton");
+        mapMenu = new OxPanel(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(7, 5), new Vector2(0.9f, 0.7f)));
+        mapMenu.Reposition(new Vector2((Screen.width / 2f) - (mapMenu.width / 2f), (Screen.height / 2f) - (mapMenu.height / 2f)));
+
+        mapFileChooser = new OxListFileSelector();
+        loadMapButton = new OxButton("Import Map");
+        nextMapButton = new OxButton("Next");
+        prevMapButton = new OxButton("Previous");
+        exploreMapButton = new OxButton("Explore");
+        OxButton mapsMenuBackButton = new OxButton("Back");
+        mapMenu.AddItems(mapFileChooser, loadMapButton, nextMapButton, prevMapButton, exploreMapButton, mapsMenuBackButton);
+
         loadMapButton.clicked += Button_clicked;
         nextMapButton.clicked += Button_clicked;
         prevMapButton.clicked += Button_clicked;
         exploreMapButton.clicked += Button_clicked;
-        //mapFileChooser.done += Chooser_done;
-        string mapsLoc = "";
-        if (ApplicationPreferences.mapsDir != null && ApplicationPreferences.mapsDir.Length > 0) mapsLoc = ApplicationPreferences.mapsDir.Substring(0, ApplicationPreferences.mapsDir.Length - 1);
-        mapFileChooser.FillBrowserList(mapsLoc, true, "bsp");
-        mapMenu.division = 0.8f;
-        mapMenu.westPercentSize = 0.9f;
-        mapMenu.eastComponent = mapChooserSplit;
-        mapMenu.westComponent = buttonSplitWithEmpty;
-        mapChooserSplit.division = 0.75f;
-        mapChooserSplit.eastPercentSize = 0.9f;
-        mapChooserSplit.horizontal = false;
-        mapChooserSplit.westComponent = mapFileChooser;
-        mapChooserSplit.eastComponent = mapButtonSplit;
-        mapButtonSplit.horizontal = false;
-        mapButtonSplit.westComponent = loadMapButton;
-        mapButtonSplit.eastComponent = backButton;
-        buttonSplitWithEmpty.division = 0.9f;
-        buttonSplitWithEmpty.horizontal = false;
-        buttonSplitWithEmpty.westComponent = new OxSplit();
-        buttonSplitWithEmpty.eastComponent = navButtonSplit;
-        navButtonSplit.division = 0.75f;
-        navButtonSplit.eastComponent = nextMapButton;
-        navButtonSplit.westComponent = navGapSplit;
-        navGapSplit.division = 0.33f;
-        navGapSplit.eastComponent = exploreMapButton;
-        navGapSplit.westComponent = prevMapButton;
-        //mapMenu.AddItem(mapFileChooser, backButton);
+        mapsMenuBackButton.clicked += Button_clicked;
+
+        dimensions = mapMenu.CurrentAppearanceInfo();
+        mapsMenuBackButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        mapsMenuBackButton.position = new Vector2(dimensions.centerWidth - mapsMenuBackButton.width, dimensions.centerHeight - mapsMenuBackButton.height);
+        mapsMenuBackButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Right);
+        mapsMenuBackButton.elementFunction = OxHelpers.ElementType.Back;
+
+        loadMapButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        loadMapButton.position = new Vector2(dimensions.centerWidth - loadMapButton.width, dimensions.centerHeight - loadMapButton.height - mapsMenuBackButton.height);
+        loadMapButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Right);
+
+        mapFileChooser.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight - loadMapButton.height - mapsMenuBackButton.height);
+        mapFileChooser.position = new Vector2(dimensions.centerWidth - mapFileChooser.width, 0);
+        mapFileChooser.anchor = (OxHelpers.Anchor.Right | OxHelpers.Anchor.Top | OxHelpers.Anchor.Bottom);
+        mapFileChooser.currentDirectory = (ApplicationPreferences.mapsDir != null && ApplicationPreferences.mapsDir.Length > 0) ? ApplicationPreferences.mapsDir : "";
+        mapFileChooser.AddExtensions("bsp");
+
+        exploreMapButton.size = new Vector2(dimensions.centerWidth * 0.25f, dimensions.centerHeight * 0.25f);
+        exploreMapButton.position = new Vector2(((dimensions.centerWidth - mapsMenuBackButton.width) / 2f) - (exploreMapButton.width / 2f), dimensions.centerHeight - exploreMapButton.height);
+        exploreMapButton.anchor = (OxHelpers.Anchor.Bottom);
+
+        nextMapButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.25f);
+        nextMapButton.position = new Vector2(exploreMapButton.x + exploreMapButton.width, dimensions.centerHeight - nextMapButton.height);
+        nextMapButton.anchor = (OxHelpers.Anchor.Bottom);
+
+        prevMapButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.25f);
+        prevMapButton.position = new Vector2(exploreMapButton.x - prevMapButton.width, dimensions.centerHeight - prevMapButton.height);
+        prevMapButton.anchor = (OxHelpers.Anchor.Bottom);
         #endregion
 
         #region ExploreInterface
-        exploreInterface = new OxSplit();
-        exploreInterface.horizontal = false;
-        exploreInterface.division = 0.9f;
-        OxSplit exploreInterfaceBackSplit = new OxSplit();
-        exploreInterface.westComponent = new OxLabel();
-        exploreInterface.eastComponent = exploreInterfaceBackSplit;
-        exploreInterfaceBackSplit.division = 0.9f;
-        exploreInterfaceBackSplit.westComponent = new OxLabel();
-        exploreInterfaceBackSplit.eastComponent = backButton;
+        exploreInterface = new OxWindow(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(5, 2), new Vector2(0.5f, 0.2f)));
+        exploreInterface.Reposition(new Vector2((Screen.width / 2f) - (replayInterface.width / 2f), (Screen.height) - (replayInterface.height) - 10));
+
+        OxButton exploreInterfaceBackButton = new OxButton("Back");
+        exploreInterfaceBackButton.elementFunction = OxHelpers.ElementType.Back;
+        exploreInterfaceBackButton.clicked += Button_clicked;
+        exploreInterface.AddItems(exploreInterfaceBackButton);
+
+        dimensions = exploreInterface.CurrentAppearanceInfo();
+        exploreInterfaceBackButton.size = new Vector2(dimensions.centerHeight * 0.5f, dimensions.centerHeight * 0.5f);
+        exploreInterface.position = new Vector2((dimensions.centerWidth / 2f) - (exploreInterfaceBackButton.width / 2f), (dimensions.centerHeight / 2f) - (exploreInterfaceBackButton.height / 2f));
         #endregion
 
         #region Settings Menu
-        settingsMenu = new OxMenu(false);
+        settingsMenu = new OxTabbedPanel(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(7, 5), new Vector2(0.9f, 0.7f)));
+        settingsMenu.Reposition(new Vector2((Screen.width / 2f) - (settingsMenu.width / 2f), (Screen.height / 2f) - (settingsMenu.height / 2f)));
 
-        fullscreenCheckBox = new OxCheckBox(ApplicationPreferences.fullscreen, "Fullscreen");
-        fullscreenCheckBox.checkBoxSwitched += CheckBox_Switched;
-        combineMeshesCheckBox = new OxCheckBox(ApplicationPreferences.combineMeshes, "Combine Map Meshes");
-        combineMeshesCheckBox.checkBoxSwitched += CheckBox_Switched;
-        averageTexturesCheckBox = new OxCheckBox(ApplicationPreferences.averageTextures, "Average Textures");
-        averageTexturesCheckBox.checkBoxSwitched += CheckBox_Switched;
-        decreaseTexturesCheckBox = new OxCheckBox(ApplicationPreferences.decreaseTextureSizes, "Decrease Texture Sizes");
-        decreaseTexturesCheckBox.checkBoxSwitched += CheckBox_Switched;
+        OxPanel generalTab = settingsMenu.AddTab("General");
+        OxPanel resourcesTab = settingsMenu.AddTab("Resources");
+        OxPanel optimizationsTab = settingsMenu.AddTab("Optimizations");
 
-        maxTextureSizeLabel = new OxLabel("Max Size", Color.black, TextAnchor.LowerCenter);
-        texturesLocationLabel = new OxLabel("Textures Location", Color.black, TextAnchor.LowerCenter);
-        mapsLocationLabel = new OxLabel("Maps Location", Color.black, TextAnchor.LowerCenter);
-        modelsLocationLabel = new OxLabel("Models Location", Color.black, TextAnchor.LowerCenter);
-        sfxLocationLabel = new OxLabel("SFX Location", Color.black, TextAnchor.LowerCenter);
+        fullscreenCheckBox = new OxCheckbox("Fullscreen", ApplicationPreferences.fullscreen);
+        manualFontSizeCheckbox = new OxCheckbox("Manual Font", ApplicationPreferences.manualFontSize);
+        manualFontSizeBox = new OxTextbox(ApplicationPreferences.fontSize.ToString());
+        manualFontSizeScroll = new OxScrollbar();
+        manualFontSizeScroll.progress = (ApplicationPreferences.fontSize - OxBase.MIN_FONT_SIZE) / ((float)(OxBase.MAX_FONT_SIZE - OxBase.MIN_FONT_SIZE)); 
+        combineMeshesCheckBox = new OxCheckbox("Combine Map Meshes", ApplicationPreferences.combineMeshes);
+        averageTexturesCheckBox = new OxCheckbox("Average Textures", ApplicationPreferences.averageTextures);
+        decreaseTexturesCheckBox = new OxCheckbox("Decrease Texture Sizes", ApplicationPreferences.decreaseTextureSizes);
+        OxLabel maxTextureSizeLabel = new OxLabel("Max Size", Color.black, OxHelpers.Alignment.Center);
+        OxLabel texturesLocationLabel = new OxLabel("Textures Location", Color.black, OxHelpers.Alignment.Center);
+        OxLabel mapsLocationLabel = new OxLabel("Maps Location", Color.black, OxHelpers.Alignment.Center);
+        OxLabel modelsLocationLabel = new OxLabel("Models Location", Color.black, OxHelpers.Alignment.Center);
+        OxLabel sfxLocationLabel = new OxLabel("SFX Location", Color.black, OxHelpers.Alignment.Center);
+        maxTextureSizeTextBox = new OxTextbox(ApplicationPreferences.maxSizeAllowed.ToString());
+        texturesLocationTextBox = new OxTextbox(ApplicationPreferences.texturesDir);
+        browseTexturesLocationButton = new OxButton("Browse");
+        mapsLocationTextBox = new OxTextbox(ApplicationPreferences.mapsDir);
+        browseMapsLocationButton = new OxButton("Browse");
+        modelsLocationTextBox = new OxTextbox(ApplicationPreferences.modelsDir);
+        browseModelsLocationButton = new OxButton("Browse");
+        sfxLocationTextBox = new OxTextbox("");
+        browseSFXLocationButton = new OxButton("Browse");
+        OxButton generalTabSettingsBackButton = new OxButton("Back");
+        OxButton resourcesTabSettingsBackButton = new OxButton("Back");
+        OxButton optimizationsTabSettingsBackButton = new OxButton("Back");
 
-        maxTextureSizeTextBox = new OxTextBox(ApplicationPreferences.maxSizeAllowed.ToString(), "");
+        fullscreenCheckBox.checkboxSwitched += CheckBox_Switched;
+        manualFontSizeCheckbox.checkboxSwitched += CheckBox_Switched;
+        combineMeshesCheckBox.checkboxSwitched += CheckBox_Switched;
+        averageTexturesCheckBox.checkboxSwitched += CheckBox_Switched;
+        decreaseTexturesCheckBox.checkboxSwitched += CheckBox_Switched;
+        manualFontSizeBox.textChanged += TextBox_textChanged;
         maxTextureSizeTextBox.textChanged += TextBox_textChanged;
-
-        texturesLocationTextBox = new OxTextBox(ApplicationPreferences.texturesDir, "");
         texturesLocationTextBox.textChanged += TextBox_textChanged;
-        browseTexturesLocationButton = new OxButton("Browse", "MenuButton");
-        browseTexturesLocationButton.clicked += Button_clicked;
-
-        mapsLocationTextBox = new OxTextBox(ApplicationPreferences.mapsDir, "");
         mapsLocationTextBox.textChanged += TextBox_textChanged;
-        browseMapsLocationButton = new OxButton("Browse", "MenuButton");
-        browseMapsLocationButton.clicked += Button_clicked;
-
-        modelsLocationTextBox = new OxTextBox(ApplicationPreferences.modelsDir, "");
         modelsLocationTextBox.textChanged += TextBox_textChanged;
-        browseModelsLocationButton = new OxButton("Browse", "MenuButton");
-        browseModelsLocationButton.clicked += Button_clicked;
-
-        sfxLocationTextBox = new OxTextBox("", "");
         sfxLocationTextBox.textChanged += TextBox_textChanged;
-        browseSFXLocationButton = new OxButton("Browse", "MenuButton");
+        manualFontSizeScroll.scrollValueChanged += Scrollbar_scrollValueChanged;
+        browseTexturesLocationButton.clicked += Button_clicked;
+        browseMapsLocationButton.clicked += Button_clicked;
+        browseModelsLocationButton.clicked += Button_clicked;
         browseSFXLocationButton.clicked += Button_clicked;
+        generalTabSettingsBackButton.clicked += Button_clicked;
+        generalTabSettingsBackButton.elementFunction = OxHelpers.ElementType.Back;
+        resourcesTabSettingsBackButton.clicked += Button_clicked;
+        resourcesTabSettingsBackButton.elementFunction = OxHelpers.ElementType.Back;
+        optimizationsTabSettingsBackButton.clicked += Button_clicked;
+        optimizationsTabSettingsBackButton.elementFunction = OxHelpers.ElementType.Back;
 
-        settingsMenu.AddItem(fullscreenCheckBox, combineMeshesCheckBox, averageTexturesCheckBox, decreaseTexturesCheckBox, maxTextureSizeLabel, maxTextureSizeTextBox, 
-            texturesLocationLabel, texturesLocationTextBox, browseTexturesLocationButton, 
-            mapsLocationLabel, mapsLocationTextBox, browseMapsLocationButton, 
-            modelsLocationLabel, modelsLocationTextBox, browseModelsLocationButton, 
-            sfxLocationLabel, sfxLocationTextBox, browseSFXLocationButton, 
-            backButton);
+        dimensions = generalTab.CurrentAppearanceInfo();
+        AppearanceInfo innerPanelDimensions;
+
+        #region General Tab
+        OxPanel screenSettingsPanel = new OxPanel();
+        generalTab.AddItems(screenSettingsPanel);
+        screenSettingsPanel.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.4f);
+        screenSettingsPanel.position = Vector2.zero;
+        screenSettingsPanel.anchor = (OxHelpers.Anchor.Left | OxHelpers.Anchor.Top);
+        screenSettingsPanel.AddItems(fullscreenCheckBox);
+
+        innerPanelDimensions = screenSettingsPanel.CurrentAppearanceInfo();
+
+        fullscreenCheckBox.size = new Vector2(innerPanelDimensions.centerWidth, innerPanelDimensions.centerHeight * 0.3f);
+        fullscreenCheckBox.position = Vector2.zero;
+        fullscreenCheckBox.anchor = (OxHelpers.Anchor.Top | OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
+
+        OxPanel fontSettingsPanel = new OxPanel();
+        generalTab.AddItems(fontSettingsPanel);
+        fontSettingsPanel.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.4f);
+        fontSettingsPanel.position = new Vector2(dimensions.centerWidth - fontSettingsPanel.width, 0);
+        fontSettingsPanel.anchor = (OxHelpers.Anchor.Right | OxHelpers.Anchor.Top);
+        fontSettingsPanel.AddItems(manualFontSizeCheckbox, manualFontSizeBox, manualFontSizeScroll);
+
+        innerPanelDimensions = fontSettingsPanel.CurrentAppearanceInfo();
+
+        manualFontSizeCheckbox.size = new Vector2(innerPanelDimensions.centerWidth, innerPanelDimensions.centerHeight * 0.3f);
+        manualFontSizeCheckbox.position = Vector2.zero;
+        manualFontSizeCheckbox.anchor = (OxHelpers.Anchor.Top | OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
+
+        manualFontSizeBox.size = new Vector2(innerPanelDimensions.centerWidth, innerPanelDimensions.centerHeight * 0.4f);
+        manualFontSizeBox.position = new Vector2(0, manualFontSizeCheckbox.height);
+        manualFontSizeBox.anchor = (OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
+
+        manualFontSizeScroll.size = new Vector2(innerPanelDimensions.centerWidth, innerPanelDimensions.centerHeight * 0.3f);
+        manualFontSizeScroll.position = new Vector2(0, manualFontSizeCheckbox.height + manualFontSizeBox.height);
+        manualFontSizeScroll.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
+
+        generalTab.AddItems(generalTabSettingsBackButton);
+        generalTabSettingsBackButton.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.15f);
+        generalTabSettingsBackButton.position = new Vector2((dimensions.centerWidth / 2f) - (generalTabSettingsBackButton.width / 2f), dimensions.centerHeight - generalTabSettingsBackButton.height - 5f);
+        generalTabSettingsBackButton.anchor = (OxHelpers.Anchor.Bottom | OxHelpers.Anchor.Left | OxHelpers.Anchor.Right);
+        #endregion
+
+        dimensions = resourcesTab.CurrentAppearanceInfo();
+
+        #region Resources Tab
+        resourcesTab.AddItems(mapsLocationLabel, mapsLocationTextBox, browseMapsLocationButton, texturesLocationLabel, texturesLocationTextBox, browseTexturesLocationButton, modelsLocationLabel, modelsLocationTextBox, browseModelsLocationButton, sfxLocationLabel, sfxLocationTextBox, browseSFXLocationButton);
+
+        mapsLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
+        mapsLocationLabel.position = Vector2.zero;
+        mapsLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
+        mapsLocationTextBox.position = new Vector2(mapsLocationLabel.width, 0);
+        mapsLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
+        browseMapsLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
+        browseMapsLocationButton.position = new Vector2(mapsLocationLabel.width + mapsLocationTextBox.width, 0);
+
+        texturesLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
+        texturesLocationLabel.position = new Vector2(0, mapsLocationLabel.height);
+        texturesLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
+        texturesLocationTextBox.position = new Vector2(texturesLocationLabel.width, mapsLocationTextBox.height);
+        texturesLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
+        browseTexturesLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
+        browseTexturesLocationButton.position = new Vector2(texturesLocationLabel.width + texturesLocationTextBox.width, browseMapsLocationButton.height);
+
+        modelsLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
+        modelsLocationLabel.position = new Vector2(0, mapsLocationLabel.height + texturesLocationLabel.height);
+        modelsLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
+        modelsLocationTextBox.position = new Vector2(modelsLocationLabel.width, mapsLocationTextBox.height + texturesLocationTextBox.height);
+        modelsLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
+        browseModelsLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
+        browseModelsLocationButton.position = new Vector2(modelsLocationLabel.width + modelsLocationTextBox.width, browseMapsLocationButton.height + browseTexturesLocationButton.height);
+
+        sfxLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
+        sfxLocationLabel.position = new Vector2(0, mapsLocationLabel.height + texturesLocationLabel.height + modelsLocationLabel.height);
+        sfxLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
+        sfxLocationTextBox.position = new Vector2(sfxLocationLabel.width, mapsLocationTextBox.height + texturesLocationTextBox.height + modelsLocationTextBox.height);
+        sfxLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
+        browseSFXLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
+        browseSFXLocationButton.position = new Vector2(sfxLocationLabel.width + sfxLocationTextBox.width, browseMapsLocationButton.height + browseTexturesLocationButton.height + browseModelsLocationButton.height);
+
+        resourcesTab.AddItems(resourcesTabSettingsBackButton);
+        resourcesTabSettingsBackButton.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.15f);
+        resourcesTabSettingsBackButton.position = new Vector2((dimensions.centerWidth / 2f) - (resourcesTabSettingsBackButton.width / 2f), dimensions.centerHeight - resourcesTabSettingsBackButton.height - 5);
+        #endregion
+
+        dimensions = optimizationsTab.CurrentAppearanceInfo();
+
+        #region Optimizations Tab
+        optimizationsTab.AddItems(combineMeshesCheckBox, averageTexturesCheckBox, decreaseTexturesCheckBox, maxTextureSizeLabel, maxTextureSizeTextBox);
+
+        combineMeshesCheckBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
+        combineMeshesCheckBox.position = new Vector2((dimensions.centerWidth / 2f) - (combineMeshesCheckBox.width / 2f), 0);
+
+        averageTexturesCheckBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
+        averageTexturesCheckBox.position = new Vector2(0, combineMeshesCheckBox.height);
+
+        decreaseTexturesCheckBox.size =  new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
+        decreaseTexturesCheckBox.position = new Vector2(averageTexturesCheckBox.width, combineMeshesCheckBox.height);
+
+        maxTextureSizeLabel.size = new Vector2(dimensions.centerWidth * 0.25f, dimensions.centerHeight * 0.2f);
+        maxTextureSizeLabel.position = new Vector2((dimensions.centerWidth / 2f) - (maxTextureSizeLabel.width), combineMeshesCheckBox.height + averageTexturesCheckBox.height);
+        maxTextureSizeTextBox.size = new Vector2(dimensions.centerWidth * 0.25f, dimensions.centerHeight * 0.2f);
+        maxTextureSizeTextBox.position = new Vector2((dimensions.centerWidth / 2f), combineMeshesCheckBox.height + decreaseTexturesCheckBox.height);
+        #endregion
         #endregion
 
         #region Texture Dir Browser
-        textureDirChooser = new OxChooser();
-        textureDirChooser.done += Chooser_done;
+        textureDirChooser = new OxListFileSelectorPrompt(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        textureDirChooser.Reposition(new Vector2((Screen.width / 2f) - (textureDirChooser.width / 2f), (Screen.height / 2f) - (textureDirChooser.height / 2f)));
+
+        textureDirChooser.directorySelection = true;
+        textureDirChooser.selectionDone += Chooser_done;
         #endregion
 
         #region Map Dir Browser
-        mapDirChooser = new OxChooser();
-        mapDirChooser.done += Chooser_done;
+        mapDirChooser = new OxListFileSelectorPrompt(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        mapDirChooser.Reposition(new Vector2((Screen.width / 2f) - (mapDirChooser.width / 2f), (Screen.height / 2f) - (mapDirChooser.height / 2f)));
+
+        mapDirChooser.directorySelection = true;
+        mapDirChooser.selectionDone += Chooser_done;
         #endregion
 
         #region Model Dir Browser
-        modelDirChooser = new OxChooser();
-        modelDirChooser.done += Chooser_done;
+        modelDirChooser = new OxListFileSelectorPrompt(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        modelDirChooser.Reposition(new Vector2((Screen.width / 2f) - (modelDirChooser.width / 2f), (Screen.height / 2f) - (modelDirChooser.height / 2f)));
+
+        modelDirChooser.directorySelection = true;
+        modelDirChooser.selectionDone += Chooser_done;
         #endregion
 
         #region SFX Dir Browser
-        sfxDirChooser = new OxChooser();
-        sfxDirChooser.done += Chooser_done;
+        sfxDirChooser = new OxListFileSelectorPrompt();
+        sfxDirChooser.directorySelection = true;
+        sfxDirChooser.selectionDone += Chooser_done;
         #endregion
     }
 
     private void MainMenu()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 3f, 4f, 0.6f, 0.8f);
-        float menuWidth = pratio * 3f;
-        float menuHeight = pratio * 4f;
-
-        mainMenu.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        mainMenu.Resize(menuWidth, menuHeight);
+        mainMenu.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        mainMenu.Reposition(new Vector2((Screen.width / 2f) - (mainMenu.width / 2f), (Screen.height / 2f) - (mainMenu.height / 2f)));
         mainMenu.Draw();
-
-        //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
     private void LiveMenu()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 3f, 4f, 0.6f, 0.8f);
-        float menuWidth = pratio * 3f;
-        float menuHeight = pratio * 4f;
-
-        liveMenu.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        liveMenu.Resize(menuWidth, menuHeight);
+        liveMenu.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        liveMenu.Reposition(new Vector2((Screen.width / 2f) - (liveMenu.width / 2f), (Screen.height / 2f) - (liveMenu.height / 2f)));
         liveMenu.Draw();
 
         //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
     private void ReplaysMenu()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 7f, 5f, 0.9f, 0.7f);
-        float menuWidth = pratio * 7f;
-        float menuHeight = pratio * 5f;
-
-        replaysMenu.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        replaysMenu.Resize(menuWidth, menuHeight);
+        replaysMenu.Resize(OxHelpers.CalculatePixelSize(new Vector2(7, 5), new Vector2(0.9f, 0.7f)));
+        replaysMenu.Reposition(new Vector2((Screen.width / 2f) - (replaysMenu.width / 2f), (Screen.height / 2f) - (replaysMenu.height / 2f)));
         replaysMenu.Draw();
 
         //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
     private void ReplayInterfaceMenu()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 7f, 5f, 0.9f, 0.7f);
-        float menuWidth = pratio * 7f;
-        float menuHeight = pratio * 5f;
-
-        replayInterface.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        replayInterface.Resize(menuWidth, menuHeight);
+        //replayInterface.Resize(OxHelpers.CalculatePixelSize(new Vector2(5, 2), new Vector2(0.5f, 0.2f)));
+        //replayInterface.Reposition(new Vector2((Screen.width / 2f) - (replayInterface.width / 2f), (Screen.height) - (replayInterface.height) - 10));
         replayInterface.Draw();
     }
     private void MapsMenu()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 7f, 5f, 0.9f, 0.7f);
-        float menuWidth = pratio * 7f;
-        float menuHeight = pratio * 5f;
-
-        //Debug.Log("Maps Menu");
-
-        mapMenu.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        mapMenu.Resize(menuWidth, menuHeight);
+        mapMenu.Resize(OxHelpers.CalculatePixelSize(new Vector2(7, 5), new Vector2(0.9f, 0.7f)));
+        mapMenu.Reposition(new Vector2((Screen.width / 2f) - (mapMenu.width / 2f), (Screen.height / 2f) - (mapMenu.height / 2f)));
         mapMenu.Draw();
 
         //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
     private void ExploreInterfaceMenu()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 7f, 5f, 0.9f, 0.7f);
-        float menuWidth = pratio * 7f;
-        float menuHeight = pratio * 5f;
-
-        exploreInterface.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        exploreInterface.Resize(menuWidth, menuHeight);
+        //exploreInterface.Resize(OxHelpers.CalculatePixelSize(new Vector2(7, 5), new Vector2(0.9f, 0.7f)));
+        //exploreInterface.Reposition(new Vector2((Screen.width / 2f) - (exploreInterface.width / 2f), (Screen.height / 2f) - (exploreInterface.height / 2f)));
         exploreInterface.Draw();
     }
     private void SettingsMenu()
     {
-        //Debug.Log("Settings Menu");
-
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 3f, 4f, 0.6f, 0.8f);
-        float menuWidth = pratio * 3f;
-        float menuHeight = pratio * 4f;
-
-        settingsMenu.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        settingsMenu.Resize(menuWidth, menuHeight);
+        settingsMenu.Resize(OxHelpers.CalculatePixelSize(new Vector2(7, 5), new Vector2(0.9f, 0.7f)));
+        settingsMenu.Reposition(new Vector2((Screen.width / 2f) - (settingsMenu.width / 2f), (Screen.height / 2f) - (settingsMenu.height / 2f)));
         settingsMenu.Draw();
 
         Screen.fullScreen = ApplicationPreferences.fullscreen;
-        //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
     private void MapDirBrowser()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 3f, 4f, 0.6f, 0.8f);
-        float menuWidth = pratio * 3f;
-        float menuHeight = pratio * 4f;
-
-        mapDirChooser.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        mapDirChooser.Resize(menuWidth, menuHeight);
+        mapDirChooser.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        mapDirChooser.Reposition(new Vector2((Screen.width / 2f) - (mapDirChooser.width / 2f), (Screen.height / 2f) - (mapDirChooser.height / 2f)));
         mapDirChooser.Draw();
 
         //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
     private void TextureDirBrowser()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 3f, 4f, 0.6f, 0.8f);
-        float menuWidth = pratio * 3f;
-        float menuHeight = pratio * 4f;
-
-        textureDirChooser.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        textureDirChooser.Resize(menuWidth, menuHeight);
+        textureDirChooser.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        textureDirChooser.Reposition(new Vector2((Screen.width / 2f) - (textureDirChooser.width / 2f), (Screen.height / 2f) - (textureDirChooser.height / 2f)));
         textureDirChooser.Draw();
 
         //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
     private void ModelDirBrowser()
     {
-        float pratio = OxGUI.GetPratio(Screen.width, Screen.height, 3f, 4f, 0.6f, 0.8f);
-        float menuWidth = pratio * 3f;
-        float menuHeight = pratio * 4f;
-
-        modelDirChooser.Reposition((Screen.width / 2f) - (menuWidth / 2f), (Screen.height / 2f) - (menuHeight / 2f));
-        modelDirChooser.Resize(menuWidth, menuHeight);
+        modelDirChooser.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        modelDirChooser.Reposition(new Vector2((Screen.width / 2f) - (modelDirChooser.width / 2f), (Screen.height / 2f) - (modelDirChooser.height / 2f)));
         modelDirChooser.Draw();
-
-        //Debug.Log(mainMenu.Position() + ", " + mainMenu.Size() + ", " + "(" + menuWidth + ", " + menuHeight + ")");
     }
 
-    //string browseMapDir, browseTextureDir;
-    void Button_clicked(OxGUI sender)
+    void Button_clicked(OxBase sender)
     {
         #region Main Menu
         if (sender == viewLiveButton)
@@ -559,25 +660,27 @@ public class ProgramInterface : MonoBehaviour
         #region Replays Menu
         if (sender == importReplayButton)
         {
-            Demo loadedReplay = new Demo(replayFileList.text, false);
+            Debug.Log(replayFileList.currentDirectory + replayFileList.selectedItem.text);
+            Demo loadedReplay = new Demo(replayFileList.currentDirectory + replayFileList.selectedItem.text, false);
             loadedReplay.ParseReplay();
             if(!loadedReplay.alreadyParsed) loadedReplay.demoMap.SetVisibility(false);
             RefreshReplaysList();
         }
-        if (sender == watchReplayButton)
+        if (sender == watchReplayButton && loadedReplayList.itemsCount > 0)
         {
             //currentReplay = Demo.loadedDemos[loadedReplayList.SelectedIndex()];
-            currentReplay = Demo.loadedDemos[loadedReplayList.items[loadedReplayList.selectedIndex].text];
+            currentReplay = Demo.loadedDemos[(string)loadedReplayList.GetItems()[loadedReplayList.selectedIndex].value];
             currentMenu = Menu.ReplayInterface;
             currentReplay.demoMap.SetVisibility(true);
             Camera.main.transform.GetComponent<CameraControl>().blockControl = false;
+            Camera.main.transform.GetComponent<CameraControl>().ShowSkybox(true);
         }
         if (sender == removeReplayButton)
         {
             if (Demo.loadedDemos.Count > 0)
             {
                 //Demo.loadedDemos[loadedReplayList.SelectedIndex()].SelfDestruct();
-                Demo.loadedDemos[loadedReplayList.items[loadedReplayList.selectedIndex].text].SelfDestruct();
+                Demo.loadedDemos[(string)loadedReplayList.GetItems()[loadedReplayList.selectedIndex].value].SelfDestruct();
                 RefreshReplaysList();
             }
         }
@@ -603,10 +706,10 @@ public class ProgramInterface : MonoBehaviour
         #endregion
 
         #region Map Menu
-        if (sender == loadMapButton)
+        if (sender == loadMapButton && mapFileChooser.selectedItem != null)
         {
             //Debug.Log("Displaying: " + mapFileChooser.text);
-            BSPMap loadedMap = new BSPMap(mapFileChooser.text.Substring(mapFileChooser.text.LastIndexOf("/") + 1));
+            BSPMap loadedMap = new BSPMap(mapFileChooser.selectedItem.text);
             if (!loadedMap.alreadyMade)
             {
                 //CoroutineRunner(loadedMap.BuildMap);
@@ -630,6 +733,7 @@ public class ProgramInterface : MonoBehaviour
         {
             currentMenu = Menu.ExploreInterface;
             Camera.main.transform.GetComponent<CameraControl>().blockControl = false;
+            Camera.main.transform.GetComponent<CameraControl>().ShowSkybox(true);
         }
         if (sender == prevMapButton)
         {
@@ -647,25 +751,23 @@ public class ProgramInterface : MonoBehaviour
         #region Settings Menu
         if (sender == browseMapsLocationButton)
         {
-            //browseMapDir = BSPMap.mapsDir.Substring(0, BSPMap.mapsDir.Length - 1);
-            mapDirChooser.FillBrowserList(ApplicationPreferences.mapsDir.Substring(0, ApplicationPreferences.mapsDir.Length - 1), false);
+            mapDirChooser.SetSelection(ApplicationPreferences.mapsDir);
             currentMenu = Menu.MapDir;
         }
         if (sender == browseTexturesLocationButton)
         {
-            //browseTextureDir = BSPMap.texturesDir.Substring(0, BSPMap.texturesDir.Length - 1);
-            textureDirChooser.FillBrowserList(ApplicationPreferences.texturesDir.Substring(0, ApplicationPreferences.texturesDir.Length - 1), false);
+            textureDirChooser.SetSelection(ApplicationPreferences.texturesDir);
             currentMenu = Menu.TextureDir;
         }
         if(sender == browseModelsLocationButton)
         {
-            modelDirChooser.FillBrowserList(ApplicationPreferences.modelsDir.Substring(0, ApplicationPreferences.modelsDir.Length - 1), false);
+            modelDirChooser.SetSelection(ApplicationPreferences.modelsDir);
             currentMenu = Menu.ModelDir;
         }
         #endregion
 
         #region General Buttons
-        if (sender == backButton)
+        if (sender.elementFunction == OxHelpers.ElementType.Back)
         {
             if (currentMenu == Menu.Live || currentMenu == Menu.Replays || currentMenu == Menu.Settings)
             {
@@ -693,36 +795,55 @@ public class ProgramInterface : MonoBehaviour
                 else currentMenu = Menu.Replays;
                 Camera.main.transform.GetComponent<CameraControl>().blockControl = true;
                 Camera.main.transform.GetComponent<CameraControl>().GoToDefault();
+                Camera.main.transform.GetComponent<CameraControl>().ShowSkybox(false);
             }
             if (currentMenu == Menu.ExploreInterface)
             {
                 currentMenu = Menu.Maps;
                 Camera.main.transform.GetComponent<CameraControl>().blockControl = true;
                 Camera.main.transform.GetComponent<CameraControl>().GoToDefault();
+                Camera.main.transform.GetComponent<CameraControl>().ShowSkybox(false);
             }
         }
         #endregion
     }
-    void playerList_indexChanged(int itemIndex)
+    private void Scrollbar_scrollValueChanged(OxBase obj, float delta)
+    {
+        if(obj == manualFontSizeScroll)
+        {
+            ApplicationPreferences.fontSize = Mathf.RoundToInt((manualFontSizeScroll.progress * (OxBase.MAX_FONT_SIZE - OxBase.MIN_FONT_SIZE)) + OxBase.MIN_FONT_SIZE);
+            manualFontSizeBox.text = ApplicationPreferences.fontSize.ToString();
+            OxBase.allTextSize = ApplicationPreferences.fontSize;
+            PlayerPrefs.SetInt(ApplicationPreferences.FONT_SIZE_PREFS, ApplicationPreferences.fontSize);
+        }
+    }
+    void playerList_selectionChanged(object sender, object selectedItem, bool selected)
     {
         int entityID = -1;
-        try { entityID = Convert.ToInt32(playerList.items[itemIndex].text); } catch(Exception) {}
+        try { entityID = Convert.ToInt32(playerList.GetItems()[playerList.IndexOf((OxBase)selectedItem)].text); } catch(Exception) {}
         if (currentReplay != null && entityID > -1 && entityID < currentReplay.demoParser.PlayerInformations.Length && currentReplay.demoParser.PlayerInformations[entityID] != null && currentReplay.playerObjects.ContainsKey(currentReplay.demoParser.PlayerInformations[entityID])) Camera.main.GetComponent<CameraControl>().target = currentReplay.playerObjects[currentReplay.demoParser.PlayerInformations[entityID]].transform;
     }
-    void replaySeeker_valueChanged(OxGUI sender, float amount)
+    void replaySeeker_valueChanged(object sender, float amount)
     {
         if (sender == replaySeeker && currentReplay != null)
         {
-            currentReplay.seekIndex = (int)(replaySeeker.value * currentReplay.totalTicks);
+            currentReplay.seekIndex = (int)(replaySeeker.progress * currentReplay.totalTicks);
             replaySeeker.text = currentReplay.seekIndex.ToString();
         }
     }
-    void CheckBox_Switched(OxGUI sender, bool check)
+    void CheckBox_Switched(object sender, bool check)
     {
         #region Settings Menu
         if (sender == fullscreenCheckBox)
         {
             ApplicationPreferences.fullscreen = check;
+        }
+        if(sender == manualFontSizeCheckbox)
+        {
+            ApplicationPreferences.manualFontSize = check;
+            OxBase.manualSizeAllText = ApplicationPreferences.manualFontSize;
+            //manualFontPanel.visible = check;
+            PlayerPrefs.SetInt(ApplicationPreferences.MANUAL_FONT_SIZE_PREFS, ApplicationPreferences.manualFontSize ? 1 : 0);
         }
         if (sender == combineMeshesCheckBox)
         {
@@ -731,25 +852,36 @@ public class ProgramInterface : MonoBehaviour
         }
         if (sender == averageTexturesCheckBox)
         {
-            if (check) decreaseTexturesCheckBox.isChecked = false;
-            ApplicationPreferences.averageTextures = averageTexturesCheckBox.isChecked;
-            ApplicationPreferences.decreaseTextureSizes = decreaseTexturesCheckBox.isChecked;
+            if (check) decreaseTexturesCheckBox.checkboxChecked = false;
+            ApplicationPreferences.averageTextures = averageTexturesCheckBox.checkboxChecked;
+            ApplicationPreferences.decreaseTextureSizes = decreaseTexturesCheckBox.checkboxChecked;
             PlayerPrefs.SetInt(ApplicationPreferences.AVERAGE_PREFS, ApplicationPreferences.averageTextures ? 1 : 0);
             PlayerPrefs.SetInt(ApplicationPreferences.DECREASE_PREFS, ApplicationPreferences.decreaseTextureSizes ? 1 : 0);
         }
         if (sender == decreaseTexturesCheckBox)
         {
-            if (check) averageTexturesCheckBox.isChecked = false;
-            ApplicationPreferences.averageTextures = averageTexturesCheckBox.isChecked;
-            ApplicationPreferences.decreaseTextureSizes = decreaseTexturesCheckBox.isChecked;
+            if (check) averageTexturesCheckBox.checkboxChecked = false;
+            ApplicationPreferences.averageTextures = averageTexturesCheckBox.checkboxChecked;
+            ApplicationPreferences.decreaseTextureSizes = decreaseTexturesCheckBox.checkboxChecked;
             PlayerPrefs.SetInt(ApplicationPreferences.AVERAGE_PREFS, ApplicationPreferences.averageTextures ? 1 : 0);
             PlayerPrefs.SetInt(ApplicationPreferences.DECREASE_PREFS, ApplicationPreferences.decreaseTextureSizes ? 1 : 0);
         }
         #endregion
     }
-    void TextBox_textChanged(OxGUI sender)
+    void TextBox_textChanged(object sender, string prevText)
     {
         #region Settings Menu
+        if(sender == manualFontSizeBox)
+        {
+            int newFontSize = ApplicationPreferences.fontSize;
+            try { newFontSize = Convert.ToInt32(manualFontSizeBox.text); } catch (Exception) { }
+            if (newFontSize < OxBase.MIN_FONT_SIZE) newFontSize = OxBase.MIN_FONT_SIZE;
+            if (newFontSize > OxBase.MAX_FONT_SIZE) newFontSize = OxBase.MAX_FONT_SIZE;
+            ApplicationPreferences.fontSize = newFontSize;
+            manualFontSizeScroll.progress = (ApplicationPreferences.fontSize - OxBase.MIN_FONT_SIZE) / ((float)(OxBase.MAX_FONT_SIZE - OxBase.MIN_FONT_SIZE));
+            OxBase.allTextSize = ApplicationPreferences.fontSize;
+            PlayerPrefs.SetInt(ApplicationPreferences.FONT_SIZE_PREFS, ApplicationPreferences.fontSize);
+        }
         if (sender == maxTextureSizeTextBox)
         {
             string maxSize = maxTextureSizeTextBox.text;
@@ -776,13 +908,13 @@ public class ProgramInterface : MonoBehaviour
         }
         #endregion
     }
-    void Chooser_done(OxChooser sender, bool accepted)
+    void Chooser_done(OxBase sender, OxHelpers.ElementType selectionType)
     {
         if (sender == mapDirChooser)
         {
-            if (accepted)
+            if (selectionType == OxHelpers.ElementType.Accept)
             {
-                ApplicationPreferences.mapsDir = mapDirChooser.text + "/";
+                ApplicationPreferences.mapsDir = mapDirChooser.currentDirectory + mapDirChooser.selectedItem.text;
                 mapsLocationTextBox.text = ApplicationPreferences.mapsDir;
                 PlayerPrefs.SetString(ApplicationPreferences.MAPS_LOC, ApplicationPreferences.mapsDir);
             }
@@ -790,9 +922,9 @@ public class ProgramInterface : MonoBehaviour
         }
         if (sender == textureDirChooser)
         {
-            if (accepted)
+            if (selectionType == OxHelpers.ElementType.Accept)
             {
-                ApplicationPreferences.texturesDir = textureDirChooser.text + "/";
+                ApplicationPreferences.texturesDir = textureDirChooser.currentDirectory + textureDirChooser.selectedItem.text;
                 texturesLocationTextBox.text = ApplicationPreferences.texturesDir;
                 PlayerPrefs.SetString(ApplicationPreferences.TEX_LOC, ApplicationPreferences.texturesDir);
             }
@@ -800,9 +932,9 @@ public class ProgramInterface : MonoBehaviour
         }
         if(sender == modelDirChooser)
         {
-            if(accepted)
+            if(selectionType == OxHelpers.ElementType.Accept)
             {
-                ApplicationPreferences.modelsDir = modelDirChooser.text + "/";
+                ApplicationPreferences.modelsDir = modelDirChooser.currentDirectory + modelDirChooser.selectedItem.text;
                 modelsLocationTextBox.text = ApplicationPreferences.modelsDir;
                 PlayerPrefs.SetString(ApplicationPreferences.MODELS_LOC, ApplicationPreferences.modelsDir);
             }
@@ -810,7 +942,7 @@ public class ProgramInterface : MonoBehaviour
         }
         //if (sender == mapFileChooser)
         //{
-        //    if (accepted)
+        //    if (selectionType == OxHelpers.ElementType.Accept)
         //    {
         //        Debug.Log("Displaying: " + mapFileChooser.text);
         //        BSPMap loadedMap = new BSPMap(mapFileChooser.text.Substring(mapFileChooser.text.LastIndexOf("/") + 1));
@@ -821,20 +953,21 @@ public class ProgramInterface : MonoBehaviour
 
     public void RefreshReplaysList()
     {
-        loadedReplayList.Clear();
+        loadedReplayList.ClearItems();
         //for (int i = 0; i < Demo.loadedDemos.Count; i++)
         foreach(KeyValuePair<string, Demo> entry in Demo.loadedDemos)
         {
             string replayName = entry.Key;
-            //replayName.Replace("\\", "/");
-            //if (replayName.LastIndexOf("/") > -1) replayName = replayName.Substring(replayName.LastIndexOf("/") + 1);
-            //if (replayName.LastIndexOf(".") > -1) replayName = replayName.Substring(0, replayName.LastIndexOf("."));
-            OxButton replayListButton = new OxButton(replayName, "MenuButton");
-            replayListButton.replaceWhat = "\\";
-            replayListButton.replaceWith = "/";
-            replayListButton.substringBefore = "/";
-            replayListButton.substringAfter = ".";
-            loadedReplayList.AddItem(replayListButton);
+            replayName.Replace("\\", "/");
+            if (replayName.LastIndexOf("/") > -1) replayName = replayName.Substring(replayName.LastIndexOf("/") + 1);
+            if (replayName.LastIndexOf(".") > -1) replayName = replayName.Substring(0, replayName.LastIndexOf("."));
+            OxButton replayListButton = new OxButton(replayName);
+            replayListButton.value = entry.Key;
+            //replayListButton.replaceWhat = "\\";
+            //replayListButton.replaceWith = "/";
+            //replayListButton.substringBefore = "/";
+            //replayListButton.substringAfter = ".";
+            loadedReplayList.AddItems(replayListButton);
         }
     }
     public void RefreshPlayerList()
@@ -842,11 +975,11 @@ public class ProgramInterface : MonoBehaviour
         if (currentReplay != null)
         {
             List<int> entityIDs = new List<int>();
-            for (int i = playerList.items.Count - 1; i >= 0; i--)
+            for (int i = playerList.itemsCount - 1; i >= 0; i--)
             {
                 int entityId = -1;
-                try { entityId = Convert.ToInt32(playerList.items[i].text); } catch(Exception) {}
-                if (i < 0 || currentReplay.demoParser.PlayerInformations[i] == null) { playerList.items.RemoveAt(i); continue; }
+                try { entityId = Convert.ToInt32(playerList.GetItems()[i].text); } catch(Exception) {}
+                if (i < 0 || currentReplay.demoParser.PlayerInformations[i] == null) { playerList.RemoveAt(i); continue; }
                 entityIDs.Add(entityId);
             }
 
@@ -854,7 +987,7 @@ public class ProgramInterface : MonoBehaviour
             {
                 foreach (Player player in currentReplay.demoTicks[currentReplay.seekIndex].playersInTick)
                 {
-                    if (entityIDs.IndexOf(player.EntityID) < 0) playerList.AddItem(new OxButton(player.EntityID.ToString()));
+                    if (entityIDs.IndexOf(player.EntityID) < 0) playerList.AddItems(new OxButton(player.EntityID.ToString()));
                 }
             }
         }
