@@ -105,7 +105,7 @@ public class CameraControl : MonoBehaviour {
 
         if (target != null)
         {
-            CSGOPlayer targetPlayer = target.GetComponent<CSGOPlayer>();
+            //CSGOPlayer targetPlayer = target.GetComponent<CSGOPlayer>();
 
             if (distance + scroll <= 0) distance = 0;
             else distance += scroll;
@@ -113,24 +113,24 @@ public class CameraControl : MonoBehaviour {
             #region Third Person View
             if (distance > 0)
             {
-                if (targetPlayer != null && targetPlayer.chestPosition != null)
+                /*if (targetPlayer != null && targetPlayer.chestPosition != null)
                 {
                     Camera.main.transform.rotation *= Quaternion.AngleAxis(horizontal, Vector3.up) * Quaternion.AngleAxis(vertical, Vector3.right);
                     Camera.main.transform.position = targetPlayer.chestPosition.position - (Camera.main.transform.forward * distance);
                     Camera.main.transform.rotation = Quaternion.LookRotation((targetPlayer.chestPosition.position - Camera.main.transform.position).normalized);
                 }
                 else
-                {
+                {*/
                     Camera.main.transform.rotation *= Quaternion.AngleAxis(horizontal, Vector3.up) * Quaternion.AngleAxis(vertical, Vector3.right);
                     Camera.main.transform.position = target.position - (Camera.main.transform.forward * distance);
                     Camera.main.transform.rotation = Quaternion.LookRotation((target.position - Camera.main.transform.position).normalized);
-                }
+                //}
             }
             #endregion
             #region First Person View
             else
             {
-                if (targetPlayer != null)
+                /*if (targetPlayer != null)
                 {
                     //Vector3 steadyPosition = new Vector3(targetPlayer.headPosition.position.x, 0, targetPlayer.headPosition.position.z);
                     //Quaternion steadyRotation = Quaternion.Euler(targetPlayer.headPosition.eulerAngles.x, targetPlayer.headPosition.eulerAngles.y, 0);
@@ -140,10 +140,10 @@ public class CameraControl : MonoBehaviour {
                     Camera.main.transform.rotation = Quaternion.Euler(targetPlayer.aimDirection.y - 90f, targetPlayer.aimDirection.x, 0);
                 }
                 else
-                {
+                {*/
                     Camera.main.transform.position = target.position;
                     Camera.main.transform.rotation = target.rotation;
-                }
+                //}
             }
             #endregion
         }

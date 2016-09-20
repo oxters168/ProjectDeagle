@@ -2,7 +2,7 @@
 using OxGUI;
 using System.Collections;
 using System.Collections.Generic;
-using DemoInfo;
+//using DemoInfo;
 using System;
 using System.Linq;
 //using Steamworks;
@@ -18,9 +18,11 @@ public class ProgramInterface : MonoBehaviour
         Maps,
         ExploreInterface,
         Settings,
+        VPKFile,
         MapDir,
         TextureDir,
         ModelDir,
+        SFXDir,
     }
 
     Menu currentMenu = Menu.Main;
@@ -48,26 +50,29 @@ public class ProgramInterface : MonoBehaviour
     OxButton loadMapButton, nextMapButton, prevMapButton, exploreMapButton;
     OxCheckbox fullscreenCheckBox, averageTexturesCheckBox, decreaseTexturesCheckBox, combineMeshesCheckBox;
     //OxLabel maxTextureSizeLabel, texturesLocationLabel, mapsLocationLabel, modelsLocationLabel, sfxLocationLabel;
-    OxTextbox maxTextureSizeTextBox, texturesLocationTextBox, mapsLocationTextBox, modelsLocationTextBox, sfxLocationTextBox;
-    OxButton browseTexturesLocationButton, browseMapsLocationButton, browseModelsLocationButton, browseSFXLocationButton;
-    OxListFileSelectorPrompt textureDirChooser, mapDirChooser, modelDirChooser, sfxDirChooser;
+    OxTextbox maxTextureSizeTextBox, vpkLocationTextBox, texturesLocationTextBox, mapsLocationTextBox, modelsLocationTextBox, sfxLocationTextBox;
+    OxButton browseVPKLocationButton, browseTexturesLocationButton, browseMapsLocationButton, browseModelsLocationButton, browseSFXLocationButton;
+    OxCheckbox vpkCheckbox, texturesCheckbox, mapsCheckbox, modelsCheckbox, sfxCheckbox;
+    OxListFileSelectorPrompt vpkFileChooser, textureDirChooser, mapDirChooser, modelDirChooser, sfxDirChooser;
     //OxButton liveMenuBackButton, replaysMenuBackButton, replayInterfaceBackButton, mapsMenuBackButton, exploreInterfaceBackButton, settingsMenuBackButton;
     //Replay aReplay;
-    public Texture2D loaded;
+    //public Texture2D loaded;
+    //public AudioClip loaded;
 
     private bool showSplash = true;
     private int splashFrame = 1;
     private float splashFPS = 24, lastFrameChange = 0;
 
-    Demo currentReplay;
+    //Demo currentReplay;
     int currentMap = 0;
 
-	// Use this for initialization
 	void Start ()
     {
         OxBase.autoSizeAllText = true;
         ApplicationPreferences.LoadSavedPreferences();
         SourceTexture.LoadDefaults();
+        //ApplicationPreferences.UpdateVPKParser();
+        //ApplicationPreferences.ResetValues();
 
         //if (false && (Application.platform == RuntimePlatform.WindowsPlayer || Application.platform == RuntimePlatform.WindowsEditor || Application.platform == RuntimePlatform.OSXPlayer || Application.platform == RuntimePlatform.OSXEditor || Application.platform == RuntimePlatform.LinuxPlayer))
         //{
@@ -75,19 +80,22 @@ public class ProgramInterface : MonoBehaviour
         //}
         MakeMenus();
 
-        ParseVPK(Environment.GetEnvironmentVariable("PROGRAMFILES(X86)").Replace("\\", "/") + "/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk");
+        #region Testing Region
+        //Debug.Log("Middle: " + BitConverter.ToUInt16(DataParser.ReadBits(new byte[] { 128, 2, 60 }, 6, 16), 0)); //61450
+        //ParseDEM("C:/Users/oxter/OneDrive/Replays/BlazingBlace.dem");
+        ParseDEM("C:/Program Files (x86)/Steam/steamapps/common/Counter-Strike Global Offensive/csgo/replays/match730_003134331647877447733_1083018565_191.dem");
+        //ParseVPK(Environment.GetEnvironmentVariable("PROGRAMFILES(X86)").Replace("\\", "/") + "/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk");
         //Demo.ConvertToHexString("Ahmed");
         //VPKParser vpkTest = new VPKParser(new FileStream("D:/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk", FileMode.Open));
         //Debug.Log(vpkTest.Parse());
         //ParseMDL();
         //ParseVVD();
         //ParseModel("ctm_fbi", "C:/Users/oxter/Documents/csgo/models/player/");
-	}
-
-    // Update is called once per frame
+        #endregion
+    }
     void Update()
     {
-        if (currentReplay != null)
+        /*if (currentReplay != null)
         {
             currentReplay.Stream();
             RefreshPlayerList();
@@ -96,9 +104,8 @@ public class ProgramInterface : MonoBehaviour
                 replaySeeker.progress = (((float) currentReplay.seekIndex) / currentReplay.totalTicks);
                 replaySeeker.text = currentReplay.seekIndex.ToString();
             }
-        }
+        }*/
     }
-
     private void OnDestroy()
     {
         /*if (GetComponent<SteamManager>() != null)
@@ -110,6 +117,7 @@ public class ProgramInterface : MonoBehaviour
         }*/
     }
 
+    #region Testing Stuff
     private void ParseModel(string name, string location)
     {
         SourceModel.GrabModel(name, location);
@@ -118,13 +126,32 @@ public class ProgramInterface : MonoBehaviour
     {
         VPKParser vpk = new VPKParser(location);
         vpk.Parse();
+
+        //loaded = ValveAudio.LoadRawMP3("mainmenu", vpk.LoadFile("/sound/music/valve_csgo_02/mainmenu.mp3"));
+        //loaded = SourceAudio.LoadRawWAV("m1_finish", vpk.LoadFile("/sound/coop_radio/m1_finish.wav"));
+        //loaded = SourceAudio.LoadRawWAV("opera", vpk.LoadFile("/sound/ambient/opera.wav"));
+
+        //AudioSource audioSource = gameObject.AddComponent<AudioSource>();
+        //audioSource.loop = true;
+        //audioSource.clip = loaded;
+        //audioSource.Play();
+
         //loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/de_nuke/nukfloorc_detaile.vtf"));
-        loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/brick/infwllb_overlay_b.vtf"));
+        //loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/brick/infwllb_overlay_b.vtf"));
         //loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/brick/brickwall031b_snow.vtf"));
         //loaded = SourceTexture.LoadVTFFile(vpk.LoadFile("/materials/ads/ad01.vtf"));
+
         //System.IO.File.WriteAllBytes("C:/Users/oxter/Documents/ad01.vtf", vpk.LoadFile("/materials/ads/ad01.vtf"));
         //System.IO.File.WriteAllBytes("C:/Users/oxter/Documents/opera.wav", vpk.LoadFile("/sound/ambient/opera.wav"));
+        //System.IO.File.WriteAllBytes("C:/Users/oxter/Documents/mainmenu.mp3", vpk.LoadFile("sound/music/valve_csgo_02/mainmenu.mp3"));
     }
+    private void ParseDEM(string location)
+    {
+        DemoParser demoParser = new DemoParser(new System.IO.FileStream(location, System.IO.FileMode.Open));
+        demoParser.ParseHeader();
+        demoParser.ParseToEnd();
+    }
+    #endregion
 
     //string demLocation = "/storage/emulated/0/Download/CSGO/replays/Replay1.dem";
     //string demLocation = "C:/Users/Oxters/Downloads/replays/Replay1.dem";
@@ -144,9 +171,11 @@ public class ProgramInterface : MonoBehaviour
         else if (currentMenu == Menu.Maps) MapsMenu();
         else if (currentMenu == Menu.ExploreInterface) ExploreInterfaceMenu();
         else if (currentMenu == Menu.Settings) SettingsMenu();
+        else if (currentMenu == Menu.VPKFile) VPKFileBrowser();
         else if (currentMenu == Menu.MapDir) MapDirBrowser();
         else if (currentMenu == Menu.TextureDir) TextureDirBrowser();
         else if (currentMenu == Menu.ModelDir) ModelDirBrowser();
+        else if (currentMenu == Menu.SFXDir) SFXDirBrowser();
     }
     private void PlaySplashScreen()
     {
@@ -231,6 +260,7 @@ public class ProgramInterface : MonoBehaviour
         importReplayButton.clicked += Button_clicked;
         removeReplayButton.clicked += Button_clicked;
         replaysMenuBackButton.clicked += Button_clicked;
+        replayFileList.directoryChanged += List_directoryChanged;
         replaysMenu.AddItems(replayFileList, loadedReplayList, watchReplayButton, importReplayButton, removeReplayButton, replaysMenuBackButton);
 
         AppearanceInfo dimensions = replaysMenu.CurrentAppearanceInfo();
@@ -251,6 +281,7 @@ public class ProgramInterface : MonoBehaviour
         replayFileList.position = new Vector2(dimensions.centerWidth - replayFileList.width, 0);
         replayFileList.AddExtensions("dem");
         replayFileList.anchor = (OxHelpers.Anchor.Right | OxHelpers.Anchor.Top | OxHelpers.Anchor.Bottom);
+        replayFileList.currentDirectory = (ApplicationPreferences.currentReplaysDir != null && ApplicationPreferences.currentReplaysDir.Length > 0) ? ApplicationPreferences.currentReplaysDir : "";
 
         loadedReplayList.horizontal = true;
         loadedReplayList.size = new Vector2(dimensions.centerWidth - replayFileList.width, dimensions.centerHeight * 0.2f);
@@ -315,6 +346,7 @@ public class ProgramInterface : MonoBehaviour
         prevMapButton.clicked += Button_clicked;
         exploreMapButton.clicked += Button_clicked;
         mapsMenuBackButton.clicked += Button_clicked;
+        mapFileChooser.directoryChanged += List_directoryChanged;
 
         dimensions = mapMenu.CurrentAppearanceInfo();
         mapsMenuBackButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
@@ -329,7 +361,7 @@ public class ProgramInterface : MonoBehaviour
         mapFileChooser.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight - loadMapButton.height - mapsMenuBackButton.height);
         mapFileChooser.position = new Vector2(dimensions.centerWidth - mapFileChooser.width, 0);
         mapFileChooser.anchor = (OxHelpers.Anchor.Right | OxHelpers.Anchor.Top | OxHelpers.Anchor.Bottom);
-        mapFileChooser.currentDirectory = (ApplicationPreferences.mapsDir != null && ApplicationPreferences.mapsDir.Length > 0) ? ApplicationPreferences.mapsDir : "";
+        mapFileChooser.currentDirectory = (ApplicationPreferences.currentMapsDir != null && ApplicationPreferences.currentMapsDir.Length > 0) ? ApplicationPreferences.currentMapsDir : "";
         mapFileChooser.AddExtensions("bsp");
 
         exploreMapButton.size = new Vector2(dimensions.centerWidth * 0.25f, dimensions.centerHeight * 0.25f);
@@ -376,11 +408,14 @@ public class ProgramInterface : MonoBehaviour
         averageTexturesCheckBox = new OxCheckbox("Average Textures", ApplicationPreferences.averageTextures);
         decreaseTexturesCheckBox = new OxCheckbox("Decrease Texture Sizes", ApplicationPreferences.decreaseTextureSizes);
         OxLabel maxTextureSizeLabel = new OxLabel("Max Size", Color.black, OxHelpers.Alignment.Center);
+        OxLabel vpkLocationLabel = new OxLabel("VPK Location", Color.black, OxHelpers.Alignment.Center);
         OxLabel texturesLocationLabel = new OxLabel("Textures Location", Color.black, OxHelpers.Alignment.Center);
         OxLabel mapsLocationLabel = new OxLabel("Maps Location", Color.black, OxHelpers.Alignment.Center);
         OxLabel modelsLocationLabel = new OxLabel("Models Location", Color.black, OxHelpers.Alignment.Center);
         OxLabel sfxLocationLabel = new OxLabel("SFX Location", Color.black, OxHelpers.Alignment.Center);
         maxTextureSizeTextBox = new OxTextbox(ApplicationPreferences.maxSizeAllowed.ToString());
+        vpkLocationTextBox = new OxTextbox(ApplicationPreferences.vpkDir);
+        browseVPKLocationButton = new OxButton("Browse");
         texturesLocationTextBox = new OxTextbox(ApplicationPreferences.texturesDir);
         browseTexturesLocationButton = new OxButton("Browse");
         mapsLocationTextBox = new OxTextbox(ApplicationPreferences.mapsDir);
@@ -389,6 +424,11 @@ public class ProgramInterface : MonoBehaviour
         browseModelsLocationButton = new OxButton("Browse");
         sfxLocationTextBox = new OxTextbox("");
         browseSFXLocationButton = new OxButton("Browse");
+        vpkCheckbox = new OxCheckbox(ApplicationPreferences.useVPK);
+        texturesCheckbox = new OxCheckbox(ApplicationPreferences.useTextures);
+        mapsCheckbox = new OxCheckbox(ApplicationPreferences.useMaps);
+        modelsCheckbox = new OxCheckbox(ApplicationPreferences.useModels);
+        sfxCheckbox = new OxCheckbox(ApplicationPreferences.useSFX);
         OxButton generalTabSettingsBackButton = new OxButton("Back");
         OxButton resourcesTabSettingsBackButton = new OxButton("Back");
         OxButton optimizationsTabSettingsBackButton = new OxButton("Back");
@@ -398,13 +438,20 @@ public class ProgramInterface : MonoBehaviour
         combineMeshesCheckBox.checkboxSwitched += CheckBox_Switched;
         averageTexturesCheckBox.checkboxSwitched += CheckBox_Switched;
         decreaseTexturesCheckBox.checkboxSwitched += CheckBox_Switched;
+        vpkCheckbox.checkboxSwitched += CheckBox_Switched;
+        texturesCheckbox.checkboxSwitched += CheckBox_Switched;
+        mapsCheckbox.checkboxSwitched += CheckBox_Switched;
+        modelsCheckbox.checkboxSwitched += CheckBox_Switched;
+        sfxCheckbox.checkboxSwitched += CheckBox_Switched;
         manualFontSizeBox.textChanged += TextBox_textChanged;
         maxTextureSizeTextBox.textChanged += TextBox_textChanged;
+        vpkLocationTextBox.textChanged += TextBox_textChanged;
         texturesLocationTextBox.textChanged += TextBox_textChanged;
         mapsLocationTextBox.textChanged += TextBox_textChanged;
         modelsLocationTextBox.textChanged += TextBox_textChanged;
         sfxLocationTextBox.textChanged += TextBox_textChanged;
         manualFontSizeScroll.scrollValueChanged += Scrollbar_scrollValueChanged;
+        browseVPKLocationButton.clicked += Button_clicked;
         browseTexturesLocationButton.clicked += Button_clicked;
         browseMapsLocationButton.clicked += Button_clicked;
         browseModelsLocationButton.clicked += Button_clicked;
@@ -463,42 +510,60 @@ public class ProgramInterface : MonoBehaviour
         dimensions = resourcesTab.CurrentAppearanceInfo();
 
         #region Resources Tab
-        resourcesTab.AddItems(mapsLocationLabel, mapsLocationTextBox, browseMapsLocationButton, texturesLocationLabel, texturesLocationTextBox, browseTexturesLocationButton, modelsLocationLabel, modelsLocationTextBox, browseModelsLocationButton, sfxLocationLabel, sfxLocationTextBox, browseSFXLocationButton);
+        resourcesTab.AddItems(vpkCheckbox, vpkLocationLabel, vpkLocationTextBox, browseVPKLocationButton, mapsCheckbox, mapsLocationLabel, mapsLocationTextBox, browseMapsLocationButton, texturesCheckbox, texturesLocationLabel, texturesLocationTextBox, browseTexturesLocationButton, modelsCheckbox, modelsLocationLabel, modelsLocationTextBox, browseModelsLocationButton, sfxCheckbox, sfxLocationLabel, sfxLocationTextBox, browseSFXLocationButton);
 
-        mapsLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
-        mapsLocationLabel.position = Vector2.zero;
-        mapsLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
-        mapsLocationTextBox.position = new Vector2(mapsLocationLabel.width, 0);
+        vpkCheckbox.size = new Vector2(dimensions.centerHeight * 0.1f, dimensions.centerHeight * 0.1f);
+        vpkCheckbox.position = Vector2.zero;
+        vpkLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.1f);
+        vpkLocationLabel.position = new Vector2(vpkCheckbox.width, 0);
+        vpkLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f - vpkCheckbox.width, dimensions.centerHeight * 0.1f);
+        vpkLocationTextBox.position = new Vector2(vpkCheckbox.width + vpkLocationLabel.width, 0);
+        vpkLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
+        browseVPKLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        browseVPKLocationButton.position = new Vector2(vpkCheckbox.width + vpkLocationLabel.width + vpkLocationTextBox.width, 0);
+
+        mapsCheckbox.size = new Vector2(dimensions.centerHeight * 0.1f, dimensions.centerHeight * 0.1f);
+        mapsCheckbox.position = new Vector2(0, vpkCheckbox.height);
+        mapsLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.1f);
+        mapsLocationLabel.position = new Vector2(mapsCheckbox.width, vpkLocationLabel.height);
+        mapsLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f - mapsCheckbox.width, dimensions.centerHeight * 0.1f);
+        mapsLocationTextBox.position = new Vector2(mapsCheckbox.width + mapsLocationLabel.width, vpkLocationTextBox.height);
         mapsLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
-        browseMapsLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
-        browseMapsLocationButton.position = new Vector2(mapsLocationLabel.width + mapsLocationTextBox.width, 0);
+        browseMapsLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        browseMapsLocationButton.position = new Vector2(mapsCheckbox.width + mapsLocationLabel.width + mapsLocationTextBox.width, browseVPKLocationButton.height);
 
-        texturesLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
-        texturesLocationLabel.position = new Vector2(0, mapsLocationLabel.height);
-        texturesLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
-        texturesLocationTextBox.position = new Vector2(texturesLocationLabel.width, mapsLocationTextBox.height);
+        texturesCheckbox.size = new Vector2(dimensions.centerHeight * 0.1f, dimensions.centerHeight * 0.1f);
+        texturesCheckbox.position = new Vector2(0, vpkCheckbox.height + mapsCheckbox.height);
+        texturesLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.1f);
+        texturesLocationLabel.position = new Vector2(texturesCheckbox.width, vpkLocationLabel.height + mapsLocationLabel.height);
+        texturesLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f - texturesCheckbox.width, dimensions.centerHeight * 0.1f);
+        texturesLocationTextBox.position = new Vector2(texturesCheckbox.width + texturesLocationLabel.width, vpkLocationTextBox.height + mapsLocationTextBox.height);
         texturesLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
-        browseTexturesLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
-        browseTexturesLocationButton.position = new Vector2(texturesLocationLabel.width + texturesLocationTextBox.width, browseMapsLocationButton.height);
+        browseTexturesLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        browseTexturesLocationButton.position = new Vector2(texturesCheckbox.width + texturesLocationLabel.width + texturesLocationTextBox.width, browseVPKLocationButton.height + browseMapsLocationButton.height);
 
-        modelsLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
-        modelsLocationLabel.position = new Vector2(0, mapsLocationLabel.height + texturesLocationLabel.height);
-        modelsLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
-        modelsLocationTextBox.position = new Vector2(modelsLocationLabel.width, mapsLocationTextBox.height + texturesLocationTextBox.height);
+        modelsCheckbox.size = new Vector2(dimensions.centerHeight * 0.1f, dimensions.centerHeight * 0.1f);
+        modelsCheckbox.position = new Vector2(0, vpkCheckbox.height + mapsCheckbox.height + texturesCheckbox.height);
+        modelsLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.1f);
+        modelsLocationLabel.position = new Vector2(modelsCheckbox.width, vpkLocationLabel.height + mapsLocationLabel.height + texturesLocationLabel.height);
+        modelsLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f - modelsCheckbox.width, dimensions.centerHeight * 0.1f);
+        modelsLocationTextBox.position = new Vector2(modelsCheckbox.width + modelsLocationLabel.width, vpkLocationTextBox.height + mapsLocationTextBox.height + texturesLocationTextBox.height);
         modelsLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
-        browseModelsLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
-        browseModelsLocationButton.position = new Vector2(modelsLocationLabel.width + modelsLocationTextBox.width, browseMapsLocationButton.height + browseTexturesLocationButton.height);
+        browseModelsLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        browseModelsLocationButton.position = new Vector2(modelsCheckbox.width + modelsLocationLabel.width + modelsLocationTextBox.width, browseVPKLocationButton.height + browseMapsLocationButton.height + browseTexturesLocationButton.height);
 
-        sfxLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.2f);
-        sfxLocationLabel.position = new Vector2(0, mapsLocationLabel.height + texturesLocationLabel.height + modelsLocationLabel.height);
-        sfxLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.2f);
-        sfxLocationTextBox.position = new Vector2(sfxLocationLabel.width, mapsLocationTextBox.height + texturesLocationTextBox.height + modelsLocationTextBox.height);
+        sfxCheckbox.size = new Vector2(dimensions.centerHeight * 0.1f, dimensions.centerHeight * 0.1f);
+        sfxCheckbox.position = new Vector2(0, vpkCheckbox.height + mapsCheckbox.height + texturesCheckbox.height + modelsCheckbox.height);
+        sfxLocationLabel.size = new Vector2(dimensions.centerWidth * 0.3f, dimensions.centerHeight * 0.1f);
+        sfxLocationLabel.position = new Vector2(sfxCheckbox.width, vpkLocationLabel.height + mapsLocationLabel.height + texturesLocationLabel.height + modelsLocationLabel.height);
+        sfxLocationTextBox.size = new Vector2(dimensions.centerWidth * 0.5f - sfxCheckbox.width, dimensions.centerHeight * 0.1f);
+        sfxLocationTextBox.position = new Vector2(sfxCheckbox.width + sfxLocationLabel.width, vpkLocationTextBox.height + mapsLocationTextBox.height + texturesLocationTextBox.height + modelsLocationTextBox.height);
         sfxLocationTextBox.textAlignment = OxHelpers.Alignment.Right;
-        browseSFXLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.2f);
-        browseSFXLocationButton.position = new Vector2(sfxLocationLabel.width + sfxLocationTextBox.width, browseMapsLocationButton.height + browseTexturesLocationButton.height + browseModelsLocationButton.height);
+        browseSFXLocationButton.size = new Vector2(dimensions.centerWidth * 0.2f, dimensions.centerHeight * 0.1f);
+        browseSFXLocationButton.position = new Vector2(sfxCheckbox.width + sfxLocationLabel.width + sfxLocationTextBox.width, browseVPKLocationButton.height + browseMapsLocationButton.height + browseTexturesLocationButton.height + browseModelsLocationButton.height);
 
         resourcesTab.AddItems(resourcesTabSettingsBackButton);
-        resourcesTabSettingsBackButton.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.15f);
+        resourcesTabSettingsBackButton.size = new Vector2(dimensions.centerWidth * 0.5f, dimensions.centerHeight * 0.1f);
         resourcesTabSettingsBackButton.position = new Vector2((dimensions.centerWidth / 2f) - (resourcesTabSettingsBackButton.width / 2f), dimensions.centerHeight - resourcesTabSettingsBackButton.height - 5);
         #endregion
 
@@ -531,6 +596,14 @@ public class ProgramInterface : MonoBehaviour
         textureDirChooser.selectionDone += Chooser_done;
         #endregion
 
+        #region VPK File Browser
+        vpkFileChooser = new OxListFileSelectorPrompt(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        vpkFileChooser.Reposition(new Vector2((Screen.width / 2f) - (vpkFileChooser.width / 2f), (Screen.height / 2f) - (vpkFileChooser.height / 2f)));
+
+        vpkFileChooser.AddExtensions("vpk");
+        vpkFileChooser.selectionDone += Chooser_done;
+        #endregion
+
         #region Map Dir Browser
         mapDirChooser = new OxListFileSelectorPrompt(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
         mapDirChooser.Reposition(new Vector2((Screen.width / 2f) - (mapDirChooser.width / 2f), (Screen.height / 2f) - (mapDirChooser.height / 2f)));
@@ -548,7 +621,9 @@ public class ProgramInterface : MonoBehaviour
         #endregion
 
         #region SFX Dir Browser
-        sfxDirChooser = new OxListFileSelectorPrompt();
+        sfxDirChooser = new OxListFileSelectorPrompt(Vector2.zero, OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        sfxDirChooser.Reposition(new Vector2((Screen.width / 2f) - (sfxDirChooser.width / 2f), (Screen.height / 2f) - (sfxDirChooser.height / 2f)));
+
         sfxDirChooser.directorySelection = true;
         sfxDirChooser.selectionDone += Chooser_done;
         #endregion
@@ -604,6 +679,12 @@ public class ProgramInterface : MonoBehaviour
 
         Screen.fullScreen = ApplicationPreferences.fullscreen;
     }
+    private void VPKFileBrowser()
+    {
+        vpkFileChooser.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        vpkFileChooser.Reposition(new Vector2((Screen.width / 2f) - (vpkFileChooser.width / 2f), (Screen.height / 2f) - (vpkFileChooser.height / 2f)));
+        vpkFileChooser.Draw();
+    }
     private void MapDirBrowser()
     {
         mapDirChooser.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
@@ -625,6 +706,12 @@ public class ProgramInterface : MonoBehaviour
         modelDirChooser.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
         modelDirChooser.Reposition(new Vector2((Screen.width / 2f) - (modelDirChooser.width / 2f), (Screen.height / 2f) - (modelDirChooser.height / 2f)));
         modelDirChooser.Draw();
+    }
+    private void SFXDirBrowser()
+    {
+        sfxDirChooser.Resize(OxHelpers.CalculatePixelSize(new Vector2(3, 4), new Vector2(0.6f, 0.8f)));
+        sfxDirChooser.Reposition(new Vector2((Screen.width / 2f) - (sfxDirChooser.width / 2f), (Screen.height / 2f) - (sfxDirChooser.height / 2f)));
+        sfxDirChooser.Draw();
     }
 
     void Button_clicked(OxBase sender)
@@ -651,8 +738,8 @@ public class ProgramInterface : MonoBehaviour
         if (sender == connectButton)
         {
             currentMenu = Menu.ReplayInterface;
-            currentReplay = new Demo(addressBox.text, true);
-            currentReplay.ParseReplay();
+            //currentReplay = new Demo(addressBox.text, true);
+            //currentReplay.ParseReplay();
             Camera.main.transform.GetComponent<CameraControl>().blockControl = false;
         }
         #endregion
@@ -661,35 +748,35 @@ public class ProgramInterface : MonoBehaviour
         if (sender == importReplayButton)
         {
             Debug.Log(replayFileList.currentDirectory + replayFileList.selectedItem.text);
-            Demo loadedReplay = new Demo(replayFileList.currentDirectory + replayFileList.selectedItem.text, false);
-            loadedReplay.ParseReplay();
-            if(!loadedReplay.alreadyParsed) loadedReplay.demoMap.SetVisibility(false);
+            //Demo loadedReplay = new Demo(replayFileList.currentDirectory + replayFileList.selectedItem.text, false);
+            //loadedReplay.ParseReplay();
+            //if(!loadedReplay.alreadyParsed) loadedReplay.demoMap.SetVisibility(false);
             RefreshReplaysList();
         }
         if (sender == watchReplayButton && loadedReplayList.itemsCount > 0)
         {
             //currentReplay = Demo.loadedDemos[loadedReplayList.SelectedIndex()];
-            currentReplay = Demo.loadedDemos[(string)loadedReplayList.GetItems()[loadedReplayList.selectedIndex].value];
-            currentMenu = Menu.ReplayInterface;
-            currentReplay.demoMap.SetVisibility(true);
+            //currentReplay = Demo.loadedDemos[(string)loadedReplayList.GetItems()[loadedReplayList.selectedIndex].value];
+            //currentMenu = Menu.ReplayInterface;
+            //currentReplay.demoMap.SetVisibility(true);
             Camera.main.transform.GetComponent<CameraControl>().blockControl = false;
             Camera.main.transform.GetComponent<CameraControl>().ShowSkybox(true);
         }
         if (sender == removeReplayButton)
         {
-            if (Demo.loadedDemos.Count > 0)
-            {
+            //if (Demo.loadedDemos.Count > 0)
+            //{
                 //Demo.loadedDemos[loadedReplayList.SelectedIndex()].SelfDestruct();
-                Demo.loadedDemos[(string)loadedReplayList.GetItems()[loadedReplayList.selectedIndex].value].SelfDestruct();
-                RefreshReplaysList();
-            }
+            //    Demo.loadedDemos[(string)loadedReplayList.GetItems()[loadedReplayList.selectedIndex].value].SelfDestruct();
+            //    RefreshReplaysList();
+            //}
         }
         #endregion
 
         #region Replay Interface
         if (sender == playButton)
         {
-            if (currentReplay != null)
+            /*if (currentReplay != null)
             {
                 currentReplay.play = !currentReplay.play;
 
@@ -701,7 +788,7 @@ public class ProgramInterface : MonoBehaviour
                 {
                     playButton.text = "Play";
                 }
-            }
+            }*/
         }
         #endregion
 
@@ -714,6 +801,8 @@ public class ProgramInterface : MonoBehaviour
             {
                 //CoroutineRunner(loadedMap.BuildMap);
                 loadedMap.BuildMap();
+                //loadedMap.Start();
+                
                 if (BSPMap.loadedMaps.Count > 1) BSPMap.loadedMaps[BSPMap.loadedMaps.Keys.ElementAt(currentMap)].SetVisibility(false);
                 currentMap = BSPMap.loadedMaps.Count - 1;
             }
@@ -749,6 +838,11 @@ public class ProgramInterface : MonoBehaviour
         #endregion
 
         #region Settings Menu
+        if (sender == browseVPKLocationButton)
+        {
+            vpkFileChooser.SetSelection(ApplicationPreferences.vpkDir);
+            currentMenu = Menu.VPKFile;
+        }
         if (sender == browseMapsLocationButton)
         {
             mapDirChooser.SetSelection(ApplicationPreferences.mapsDir);
@@ -763,6 +857,11 @@ public class ProgramInterface : MonoBehaviour
         {
             modelDirChooser.SetSelection(ApplicationPreferences.modelsDir);
             currentMenu = Menu.ModelDir;
+        }
+        if (sender == browseSFXLocationButton)
+        {
+            sfxDirChooser.SetSelection(ApplicationPreferences.sfxDir);
+            currentMenu = Menu.SFXDir;
         }
         #endregion
 
@@ -783,16 +882,17 @@ public class ProgramInterface : MonoBehaviour
             }
             if (currentMenu == Menu.ReplayInterface)
             {
-                bool live = false;
-                if (currentReplay != null)
+                //bool live = false;
+                /*if (currentReplay != null)
                 {
-                    if (currentReplay.port > -1) live = true;
+                    //if (currentReplay.port > -1) live = true;
                     currentReplay.Stop();
                     if(currentReplay.demoMap != null) currentReplay.demoMap.SetVisibility(false);
                     currentReplay = null;
-                }
-                if (live) currentMenu = Menu.Live;
-                else currentMenu = Menu.Replays;
+                }*/
+                //if (live) currentMenu = Menu.Live;
+                //else currentMenu = Menu.Replays;
+                currentMenu = Menu.Replays;
                 Camera.main.transform.GetComponent<CameraControl>().blockControl = true;
                 Camera.main.transform.GetComponent<CameraControl>().GoToDefault();
                 Camera.main.transform.GetComponent<CameraControl>().ShowSkybox(false);
@@ -807,7 +907,7 @@ public class ProgramInterface : MonoBehaviour
         }
         #endregion
     }
-    private void Scrollbar_scrollValueChanged(OxBase obj, float delta)
+    void Scrollbar_scrollValueChanged(OxBase obj, float delta)
     {
         if(obj == manualFontSizeScroll)
         {
@@ -821,15 +921,15 @@ public class ProgramInterface : MonoBehaviour
     {
         int entityID = -1;
         try { entityID = Convert.ToInt32(playerList.GetItems()[playerList.IndexOf((OxBase)selectedItem)].text); } catch(Exception) {}
-        if (currentReplay != null && entityID > -1 && entityID < currentReplay.demoParser.PlayerInformations.Length && currentReplay.demoParser.PlayerInformations[entityID] != null && currentReplay.playerObjects.ContainsKey(currentReplay.demoParser.PlayerInformations[entityID])) Camera.main.GetComponent<CameraControl>().target = currentReplay.playerObjects[currentReplay.demoParser.PlayerInformations[entityID]].transform;
+        //if (currentReplay != null && entityID > -1 && entityID < currentReplay.demoParser.PlayerInformations.Length && currentReplay.demoParser.PlayerInformations[entityID] != null && currentReplay.playerObjects.ContainsKey(currentReplay.demoParser.PlayerInformations[entityID])) Camera.main.GetComponent<CameraControl>().target = currentReplay.playerObjects[currentReplay.demoParser.PlayerInformations[entityID]].transform;
     }
     void replaySeeker_valueChanged(object sender, float amount)
     {
-        if (sender == replaySeeker && currentReplay != null)
+        /*if (sender == replaySeeker && currentReplay != null)
         {
             currentReplay.seekIndex = (int)(replaySeeker.progress * currentReplay.totalTicks);
             replaySeeker.text = currentReplay.seekIndex.ToString();
-        }
+        }*/
     }
     void CheckBox_Switched(object sender, bool check)
     {
@@ -866,6 +966,32 @@ public class ProgramInterface : MonoBehaviour
             PlayerPrefs.SetInt(ApplicationPreferences.AVERAGE_PREFS, ApplicationPreferences.averageTextures ? 1 : 0);
             PlayerPrefs.SetInt(ApplicationPreferences.DECREASE_PREFS, ApplicationPreferences.decreaseTextureSizes ? 1 : 0);
         }
+
+        if(sender == vpkCheckbox)
+        {
+            ApplicationPreferences.useVPK = check;
+            PlayerPrefs.SetInt(ApplicationPreferences.USE_VPK, ApplicationPreferences.useVPK ? 1 : 0);
+        }
+        if (sender == texturesCheckbox)
+        {
+            ApplicationPreferences.useTextures = check;
+            PlayerPrefs.SetInt(ApplicationPreferences.USE_TEX, ApplicationPreferences.useTextures ? 1 : 0);
+        }
+        if (sender == mapsCheckbox)
+        {
+            ApplicationPreferences.useMaps = check;
+            PlayerPrefs.SetInt(ApplicationPreferences.USE_MAPS, ApplicationPreferences.useMaps ? 1 : 0);
+        }
+        if(sender == modelsCheckbox)
+        {
+            ApplicationPreferences.useModels = check;
+            PlayerPrefs.SetInt(ApplicationPreferences.USE_MODELS, ApplicationPreferences.useModels ? 1 : 0);
+        }
+        if(sender == sfxCheckbox)
+        {
+            ApplicationPreferences.useSFX = check;
+            PlayerPrefs.SetInt(ApplicationPreferences.USE_SFX, ApplicationPreferences.useSFX ? 1 : 0);
+        }
         #endregion
     }
     void TextBox_textChanged(object sender, string prevText)
@@ -891,6 +1017,11 @@ public class ProgramInterface : MonoBehaviour
             maxTextureSizeTextBox.text = ApplicationPreferences.maxSizeAllowed.ToString();
             PlayerPrefs.SetInt(ApplicationPreferences.MAX_SIZE, ApplicationPreferences.maxSizeAllowed);
         }
+        if (sender == vpkLocationTextBox)
+        {
+            ApplicationPreferences.vpkDir = vpkLocationTextBox.text;
+            PlayerPrefs.SetString(ApplicationPreferences.VPK_LOC, ApplicationPreferences.vpkDir);
+        }
         if (sender == mapsLocationTextBox)
         {
             ApplicationPreferences.mapsDir = mapsLocationTextBox.text;
@@ -906,10 +1037,25 @@ public class ProgramInterface : MonoBehaviour
             ApplicationPreferences.modelsDir = modelsLocationTextBox.text;
             PlayerPrefs.SetString(ApplicationPreferences.MODELS_LOC, ApplicationPreferences.modelsDir);
         }
+        if (sender == sfxLocationTextBox)
+        {
+            ApplicationPreferences.sfxDir = sfxLocationTextBox.text;
+            PlayerPrefs.SetString(ApplicationPreferences.SFX_LOC, ApplicationPreferences.sfxDir);
+        }
         #endregion
     }
     void Chooser_done(OxBase sender, OxHelpers.ElementType selectionType)
     {
+        if (sender == vpkFileChooser)
+        {
+            if (selectionType == OxHelpers.ElementType.Accept)
+            {
+                ApplicationPreferences.vpkDir = vpkFileChooser.currentDirectory + vpkFileChooser.selectedItem.text;
+                vpkLocationTextBox.text = ApplicationPreferences.vpkDir;
+                PlayerPrefs.SetString(ApplicationPreferences.VPK_LOC, ApplicationPreferences.vpkDir);
+            }
+            currentMenu = Menu.Settings;
+        }
         if (sender == mapDirChooser)
         {
             if (selectionType == OxHelpers.ElementType.Accept)
@@ -940,22 +1086,36 @@ public class ProgramInterface : MonoBehaviour
             }
             currentMenu = Menu.Settings;
         }
-        //if (sender == mapFileChooser)
-        //{
-        //    if (selectionType == OxHelpers.ElementType.Accept)
-        //    {
-        //        Debug.Log("Displaying: " + mapFileChooser.text);
-        //        BSPMap loadedMap = new BSPMap(mapFileChooser.text.Substring(mapFileChooser.text.LastIndexOf("/") + 1));
-        //        loadedMap.MakeMap();
-        //    }
-        //}
+        if (sender == sfxDirChooser)
+        {
+            if (selectionType == OxHelpers.ElementType.Accept)
+            {
+                ApplicationPreferences.sfxDir = sfxDirChooser.currentDirectory + sfxDirChooser.selectedItem.text;
+                sfxLocationTextBox.text = ApplicationPreferences.sfxDir;
+                PlayerPrefs.SetString(ApplicationPreferences.SFX_LOC, ApplicationPreferences.sfxDir);
+            }
+            currentMenu = Menu.Settings;
+        }
+    }
+    void List_directoryChanged(OxBase obj, string prevDirectory)
+    {
+        if(obj == replayFileList)
+        {
+            ApplicationPreferences.currentReplaysDir = replayFileList.currentDirectory;
+            PlayerPrefs.SetString(ApplicationPreferences.CURRENT_REPLAYS_DIR, ApplicationPreferences.currentReplaysDir);
+        }
+        if(obj == mapFileChooser)
+        {
+            ApplicationPreferences.currentMapsDir = mapFileChooser.currentDirectory;
+            PlayerPrefs.SetString(ApplicationPreferences.CURRENT_MAPS_DIR, ApplicationPreferences.currentMapsDir);
+        }
     }
 
     public void RefreshReplaysList()
     {
         loadedReplayList.ClearItems();
         //for (int i = 0; i < Demo.loadedDemos.Count; i++)
-        foreach(KeyValuePair<string, Demo> entry in Demo.loadedDemos)
+        /*foreach(KeyValuePair<string, Demo> entry in Demo.loadedDemos)
         {
             string replayName = entry.Key;
             replayName.Replace("\\", "/");
@@ -968,11 +1128,11 @@ public class ProgramInterface : MonoBehaviour
             //replayListButton.substringBefore = "/";
             //replayListButton.substringAfter = ".";
             loadedReplayList.AddItems(replayListButton);
-        }
+        }*/
     }
     public void RefreshPlayerList()
     {
-        if (currentReplay != null)
+        /*if (currentReplay != null)
         {
             List<int> entityIDs = new List<int>();
             for (int i = playerList.itemsCount - 1; i >= 0; i--)
@@ -990,7 +1150,7 @@ public class ProgramInterface : MonoBehaviour
                     if (entityIDs.IndexOf(player.EntityID) < 0) playerList.AddItems(new OxButton(player.EntityID.ToString()));
                 }
             }
-        }
+        }*/
     }
 
     //public void LoadMap(BSPMap map)

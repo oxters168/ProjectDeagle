@@ -13,6 +13,8 @@ namespace OxGUI
         private List<string> extensions = new List<string>();
         private List<float> savedScroll = new List<float>();
 
+        public event OxHelpers.DirectoryChanged directoryChanged;
+
         public OxListFileSelector() : this(Vector2.zero, Vector2.zero, "") { }
         public OxListFileSelector(string startingDir) : this(Vector2.zero, Vector2.zero, startingDir) { }
         public OxListFileSelector(Vector2 position, Vector2 size) : this(position, size, "") { }
@@ -30,6 +32,7 @@ namespace OxGUI
 
         private void PopulateList()
         {
+            string prevDir = currentDirectory;
             currentDirectory = OxHelpers.PathConvention(currentDirectory);
             FindDirectory();
 
@@ -47,6 +50,8 @@ namespace OxGUI
             {
                 AddDrives();             
             }
+
+            FireDirectoryChanged(prevDir);
         }
 
         private void FindDirectory()
@@ -188,5 +193,10 @@ namespace OxGUI
             return extensions.ToArray();
         }
         #endregion
+
+        protected void FireDirectoryChanged(string prevDirectory)
+        {
+            if (directoryChanged != null) directoryChanged(this, prevDirectory);
+        }
     }
 }

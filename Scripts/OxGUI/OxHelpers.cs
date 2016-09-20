@@ -31,6 +31,7 @@ namespace OxGUI
         public delegate void CheckboxSwitched(OxBase obj, bool state);
         public delegate void TextChanged(OxBase obj, string prevText);
         public delegate void SelectionDone(OxBase obj, ElementType selectionType);
+        public delegate void DirectoryChanged(OxBase obj, string prevDirectory);
 
         public static int CalculateFontSize(float elementHeight)
         {

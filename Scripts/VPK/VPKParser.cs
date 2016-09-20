@@ -5,40 +5,44 @@ using System.Collections.Generic;
 
 public class VPKParser
 {
-    const ushort DIR_PAK = 0x7fff, NO_PAK = ushort.MaxValue;
+    private const ushort DIR_PAK = 0x7fff, NO_PAK = ushort.MaxValue;
     public string directoryLocation { get; private set; }
     public string vpkPakName { get; private set; }
-    private string location;
+    public string location { get; private set; }
     private ushort currentlyOpenArchive = NO_PAK;
     private Stream currentStream;
     private VPKHeader header;
     private int headerSize;
-    private Dictionary<string, Dictionary<string, Dictionary<string, VPKDirectoryEntry>>> tree = new Dictionary<string, Dictionary<string, Dictionary<string, VPKDirectoryEntry>>>();
+    private Dictionary<string, Dictionary<string, Dictionary<string, VPKDirectoryEntry>>> tree;
+    public bool parsed { get { return tree != null && tree.Count > 0; } private set { } }
 
     public VPKParser(string location)
     {
-        this.location = location.Replace("\\", "/");
-        directoryLocation = this.location.Substring(0, this.location.LastIndexOf("/") + 1);
-        vpkPakName = this.location.Substring(this.location.LastIndexOf("/") + 1);
-        vpkPakName = vpkPakName.Substring(0, vpkPakName.IndexOf("_"));
+        if (location.Length > 0)
+        {
+            this.location = location.Replace("\\", "/").ToLower();
+            if (this.location.IndexOf("/") > -1 && this.location.LastIndexOf("/") != this.location.Length - 1) directoryLocation = this.location.Substring(0, this.location.LastIndexOf("/") + 1);
+            if (this.location.IndexOf("/") > -1 && this.location.LastIndexOf("/") != this.location.Length - 1) vpkPakName = this.location.Substring(this.location.LastIndexOf("/") + 1);
+            if (vpkPakName != null && vpkPakName.IndexOf("_") > -1) vpkPakName = vpkPakName.Substring(0, vpkPakName.IndexOf("_"));
+        }
     }
 
     private bool ParseHeader()
     {
-        uint signature = FileReader.ReadUInt(currentStream);
+        uint signature = DataParser.ReadUInt(currentStream);
 
         if (signature == VPKHeader.Signature)
         {
-            header.Version = FileReader.ReadUInt(currentStream);
-            header.TreeSize = FileReader.ReadUInt(currentStream);
+            header.Version = DataParser.ReadUInt(currentStream);
+            header.TreeSize = DataParser.ReadUInt(currentStream);
             headerSize = 12;
 
             if (header.Version > 1)
             {
-                header.FileDataSectionSize = FileReader.ReadUInt(currentStream);
-                header.ArchiveMD5SectionSize = FileReader.ReadUInt(currentStream);
-                header.OtherMD5SectionSize = FileReader.ReadUInt(currentStream);
-                header.SignatureSectionSize = FileReader.ReadUInt(currentStream);
+                header.FileDataSectionSize = DataParser.ReadUInt(currentStream);
+                header.ArchiveMD5SectionSize = DataParser.ReadUInt(currentStream);
+                header.OtherMD5SectionSize = DataParser.ReadUInt(currentStream);
+                header.SignatureSectionSize = DataParser.ReadUInt(currentStream);
                 headerSize += 16;
             }
         }
@@ -46,13 +50,14 @@ public class VPKParser
 
         return true;
     }
-    private void ReadTree()
+    private void ParseTree()
     {
+        tree = new Dictionary<string, Dictionary<string, Dictionary<string, VPKDirectoryEntry>>>();
         long readFromTree = 0;
 
         while (readFromTree < header.TreeSize)
         {
-            string extension = FileReader.ReadNullTerminatedString(currentStream);
+            string extension = DataParser.ReadNullTerminatedString(currentStream);
             readFromTree++;
             if (extension.Length <= 0) extension = tree.Keys.ElementAt(tree.Count - 1);
             else
@@ -63,7 +68,7 @@ public class VPKParser
 
             while (true)
             {
-                string directory = FileReader.ReadNullTerminatedString(currentStream);
+                string directory = DataParser.ReadNullTerminatedString(currentStream);
                 readFromTree++;
                 if (directory.Length <= 0) break;
                 if (!tree[extension].ContainsKey(directory)) tree[extension].Add(directory, new Dictionary<string, VPKDirectoryEntry>());
@@ -71,24 +76,24 @@ public class VPKParser
 
                 while (true)
                 {
-                    string file = FileReader.ReadNullTerminatedString(currentStream);
+                    string file = DataParser.ReadNullTerminatedString(currentStream);
                     readFromTree++;
                     if (file.Length <= 0) break;
                     readFromTree += file.Length;
 
                     VPKDirectoryEntry dirEntry;
-                    dirEntry.CRC = FileReader.ReadUInt(currentStream);
-                    dirEntry.PreloadBytes = FileReader.ReadUShort(currentStream);
-                    dirEntry.ArchiveIndex = FileReader.ReadUShort(currentStream);
-                    dirEntry.EntryOffset = FileReader.ReadUInt(currentStream);
-                    dirEntry.EntryLength = FileReader.ReadUInt(currentStream);
-                    ushort terminator = FileReader.ReadUShort(currentStream);
+                    dirEntry.CRC = DataParser.ReadUInt(currentStream);
+                    dirEntry.PreloadBytes = DataParser.ReadUShort(currentStream);
+                    dirEntry.ArchiveIndex = DataParser.ReadUShort(currentStream);
+                    dirEntry.EntryOffset = DataParser.ReadUInt(currentStream);
+                    dirEntry.EntryLength = DataParser.ReadUInt(currentStream);
+                    ushort terminator = DataParser.ReadUShort(currentStream);
                     readFromTree += (4 + 2 + 2 + 4 + 4 + 2);
 
                     dirEntry.PreloadData = new byte[dirEntry.PreloadBytes];
                     for (int i = 0; i < dirEntry.PreloadData.Length; i++)
                     {
-                        dirEntry.PreloadData[i] = FileReader.ReadByte(currentStream);
+                        dirEntry.PreloadData[i] = DataParser.ReadByte(currentStream);
                     }
                     readFromTree += dirEntry.PreloadBytes;
 
@@ -113,7 +118,7 @@ public class VPKParser
         try { currentStream = new FileStream(location, FileMode.Open); currentlyOpenArchive = DIR_PAK; } catch (System.Exception) { currentlyOpenArchive = NO_PAK; }
         if (currentlyOpenArchive != NO_PAK && ParseHeader())
         {
-            ReadTree();
+            ParseTree();
         }
     }
 
@@ -140,16 +145,20 @@ public class VPKParser
         if (dirFixed.IndexOf("/") == 0) dirFixed = dirFixed.Substring(1);
         if (dirFixed.LastIndexOf("/") == dirFixed.Length - 1) dirFixed = dirFixed.Substring(0, dirFixed.Length - 1);
 
-        if (tree.ContainsKey(extFixed) && tree[extFixed].ContainsKey(dirFixed) && tree[extFixed][dirFixed].ContainsKey(fileNameFixed))
+        if (tree != null && tree.ContainsKey(extFixed) && tree[extFixed].ContainsKey(dirFixed) && tree[extFixed][dirFixed].ContainsKey(fileNameFixed))
         {
             VPKDirectoryEntry entry = tree[extFixed][dirFixed][fileNameFixed];
+
+            if (entry.EntryLength <= 0) return entry.PreloadData;
 
             #region Get Correct Pak and Full Path
             bool alreadyOpenPak = false;
 
             string vpkPakDir = "_";
+            //if (entry.ArchiveIndex >= 1000) Debug.Log("Probably in Dir dir");
             if (entry.ArchiveIndex == DIR_PAK)
             {
+                //Debug.Log("Switching to Dir dir");
                 vpkPakDir += "dir";
 
                 if (currentlyOpenArchive == DIR_PAK) alreadyOpenPak = true;
@@ -184,17 +193,61 @@ public class VPKParser
                 #endregion
 
                 #region Read File Bytes
-                file = FileReader.ReadBytes(currentStream, (int)entry.EntryLength);
-                //file = new byte[entry.EntryLength];
-                //for (int i = 0; i < file.Length; i++)
-                //{
-                //    file[i] = FileReader.ReadByte(currentStream);
-                //}
+                file = DataParser.ReadBytes(currentStream, (int)entry.EntryLength);
                 #endregion
             }
         }
 
         return file;
+    }
+
+    public bool FileExists(string path)
+    {
+        string fixedPath = path.Replace("\\", "/").ToLower();
+        string extension = fixedPath.Substring(fixedPath.LastIndexOf(".") + 1);
+        string directory = fixedPath.Substring(0, fixedPath.LastIndexOf("/"));
+        string fileName = fixedPath.Substring(fixedPath.LastIndexOf("/") + 1);
+        fileName = fileName.Substring(0, fileName.LastIndexOf("."));
+
+        return FileExists(extension, directory, fileName);
+    }
+    public bool FileExists(string extension, string directory, string fileName)
+    {
+        string extFixed = extension.ToLower();
+        string dirFixed = directory.Replace("\\", "/").ToLower();
+        string fileNameFixed = fileName.ToLower();
+
+        if (extFixed.IndexOf(".") == 0) extFixed = extFixed.Substring(1);
+
+        if (dirFixed.IndexOf("/") == 0) dirFixed = dirFixed.Substring(1);
+        if (dirFixed.LastIndexOf("/") == dirFixed.Length - 1) dirFixed = dirFixed.Substring(0, dirFixed.Length - 1);
+
+        if (tree != null && tree.ContainsKey(extFixed) && tree[extFixed].ContainsKey(dirFixed) && tree[extFixed][dirFixed].ContainsKey(fileNameFixed))
+        {
+            return true;
+        }
+
+        return false;
+    }
+    public bool DirectoryExists(string directory)
+    {
+        string dirFixed = directory.Replace("\\", "/").ToLower();
+
+        if (dirFixed.IndexOf("/") == 0) dirFixed = dirFixed.Substring(1);
+        if (dirFixed.LastIndexOf("/") == dirFixed.Length - 1) dirFixed = dirFixed.Substring(0, dirFixed.Length - 1);
+
+        if (tree != null)
+        {
+            for (int i = 0; i < tree.Count; i++)
+            {
+                if (tree.ContainsKey(tree.Keys.ElementAt(i)) && tree[tree.Keys.ElementAt(i)].ContainsKey(dirFixed))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public void Close()

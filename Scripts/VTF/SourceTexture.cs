@@ -25,7 +25,11 @@ public class SourceTexture
     {
         SourceTexture srcTexture = null;
 
-        string actualLocation = Locate(rawStringPath);
+        string actualLocation = "";
+        bool foundInFileSystem = false, foundInVPK = false;
+        if (ApplicationPreferences.useTextures) { actualLocation = LocateInFileSystem(rawStringPath); if (File.Exists(ApplicationPreferences.texturesDir + actualLocation + ".vtf") || File.Exists(ApplicationPreferences.texturesDir + actualLocation + ".png")) foundInFileSystem = true; }
+        if (!foundInFileSystem && ApplicationPreferences.useVPK) { actualLocation = LocateInVPK(rawStringPath); if (ApplicationPreferences.vpkParser.FileExists("/materials/" + actualLocation + ".vtf")) foundInVPK = true; }
+        if (!foundInFileSystem && !foundInVPK) actualLocation = LocateInResources(rawStringPath);
 
         if (loadedTextures.ContainsKey(actualLocation))
         {
@@ -35,18 +39,31 @@ public class SourceTexture
         {
             srcTexture = new SourceTexture(actualLocation);
 
-            if (File.Exists(ApplicationPreferences.texturesDir + srcTexture.location + ".png"))
+            if (foundInFileSystem)
             {
+                bool isVTF = true;
+                string inFileSystem = ApplicationPreferences.texturesDir + srcTexture.location + ".vtf";
+                if (!File.Exists(inFileSystem)) { inFileSystem = ApplicationPreferences.texturesDir + srcTexture.location + ".png"; isVTF = false; }
+
                 byte[] bytes = null;
-                try { bytes = File.ReadAllBytes(ApplicationPreferences.texturesDir + srcTexture.location + ".png"); } catch (Exception e) { Debug.Log(e.Message); }
+                try { bytes = File.ReadAllBytes(inFileSystem); } catch (Exception e) { Debug.Log(e.Message); }
                 if (bytes != null)
                 {
-                    srcTexture.texture = new Texture2D(0, 0);
-                    srcTexture.texture.LoadImage(bytes);
+                    if (isVTF)
+                    {
+                        srcTexture.texture = LoadVTFFile(bytes);
+                    }
+                    else
+                    {
+                        srcTexture.texture = new Texture2D(0, 0);
+                        srcTexture.texture.LoadImage(bytes);
+                    }
                     bytes = null;
                 }
-
-                //Debug.Log("New Texture Loaded: " + ApplicationPreferences.texturesDir + srcTexture.location + ".png");
+            }
+            else if(foundInVPK)
+            {
+                srcTexture.texture = LoadVTFFile(ApplicationPreferences.vpkParser.LoadFile("/materials/" + srcTexture.location + ".vtf"));
             }
             else if(plainTextures.ContainsKey(srcTexture.location + ".png"))
             {
@@ -56,12 +73,10 @@ public class SourceTexture
                 for (int i = 0; i < plainTexturePixels.Length; i++) plainTexturePixels[i] = currentPlainTextureColor;
                 srcTexture.texture.SetPixels(plainTexturePixels);
                 srcTexture.texture.Apply();
-                //srcTexture.texture = Resources.Load<Texture2D>("Textures/Plain/" + srcTexture.location);
-                //Debug.Log("New Texture Loaded: " + "Textures/Plain/" + srcTexture.location + ".png");
             }
             else
             {
-                Debug.Log("Could not find Texture: " + srcTexture.location + ".png");
+                Debug.Log("Could not find Texture: " + srcTexture.location + " Raw Path: " + rawStringPath);
             }
 
             if (srcTexture.texture != null)
@@ -74,41 +89,76 @@ public class SourceTexture
 
         return srcTexture;
     }
-
-    private static string Locate(string rawPath)
+    private static string LocateInFileSystem(string rawPath)
     {
-        string finalLocation = RemoveMisleadingPath(rawPath);
+        string fixedLocation = PatchNameInFileSystem(RemoveMisleadingPath(rawPath.Replace("\\", "/").ToLower()), "vtf", "png");
 
-        string vmtFile = "";
-        //currentFace.materialLocation = PatchName(currentFace.materialLocation);
-        if (Directory.Exists(ApplicationPreferences.texturesDir))
+        if (!File.Exists(ApplicationPreferences.texturesDir + fixedLocation + ".vtf") && !File.Exists(ApplicationPreferences.texturesDir + fixedLocation + ".png"))
         {
-            finalLocation = PatchName(ApplicationPreferences.texturesDir, finalLocation, "vmt");
-            vmtFile = ApplicationPreferences.texturesDir + finalLocation + ".vmt";
-            if (!File.Exists(vmtFile)) vmtFile = ApplicationPreferences.texturesDir + finalLocation + ".txt";
-        }
-        else
-        {
-            finalLocation = PatchName(finalLocation, "vmt");
-        }
+            fixedLocation = PatchNameInFileSystem(RemoveMisleadingPath(rawPath.Replace("\\", "/").ToLower()), "vmt", "txt");
 
-        //if (File.Exists(currentFace.materialLocation))
-        string[] vmtLines = null;
-        if (File.Exists(vmtFile))
-        {
-            try { vmtLines = File.ReadAllLines(@vmtFile); }
-            catch (Exception e) { Debug.Log(e.Message); }
-        }
-        else
-        {
-            if(vmtFiles.ContainsKey(finalLocation + ".vmt"))
+            string vmtFile = "";
+            vmtFile = ApplicationPreferences.texturesDir + fixedLocation + ".vmt";
+            if (!File.Exists(vmtFile)) vmtFile = ApplicationPreferences.texturesDir + fixedLocation + ".txt";
+
+            string[] vmtLines = null;
+            if (File.Exists(vmtFile))
             {
-                vmtLines = vmtFiles[finalLocation + ".vmt"];
+                try { vmtLines = File.ReadAllLines(vmtFile); }
+                catch (Exception e) { Debug.Log(e.ToString()); }
             }
-            //TextAsset vmtTextAsset = Resources.Load<TextAsset>("Textures/Plain/" + finalLocation);
-            //if (vmtTextAsset != null) vmtLines = vmtTextAsset.text.Split('\n');
+            string vmtPointingTo = GetLocationFromVMT(vmtLines);
+            if (vmtPointingTo.Length > 0) fixedLocation = PatchNameInFileSystem(RemoveMisleadingPath(vmtPointingTo.Replace("\\", "/").ToLower()), "vtf", "png");
         }
 
+        return fixedLocation;
+    }
+    private static string LocateInVPK(string rawPath)
+    {
+        string fixedLocation = PatchNameInVPK(RemoveMisleadingPath(rawPath.Replace("\\", "/").ToLower()), "vtf");
+
+        if (!ApplicationPreferences.vpkParser.FileExists("/materials/" + fixedLocation + ".vtf"))
+        {
+            fixedLocation = PatchNameInVPK(RemoveMisleadingPath(rawPath.Replace("\\", "/").ToLower()), "vmt");
+
+            //Debug.Log("/materials/" + fixedLocation + ".vmt" + ": " + ApplicationPreferences.vpkParser.FileExists("/materials/" + fixedLocation + ".vmt"));
+            string[] vmtLines = null;
+            if (ApplicationPreferences.vpkParser.FileExists("/materials/" + fixedLocation + ".vmt"))
+            {
+                byte[] bytes = ApplicationPreferences.vpkParser.LoadFile("/materials/" + fixedLocation + ".vmt");
+                //Debug.Log("File Size: " + bytes.Length);
+                vmtLines = ReadAllLines(bytes, System.Text.Encoding.Unicode, true);
+            }
+            string vmtPointingTo = GetLocationFromVMT(vmtLines);
+            //if (vmtLines.Length > 0) Debug.Log("First VMT Line: " + vmtLines[0]);
+            if (vmtPointingTo.Length > 0) fixedLocation = PatchNameInVPK(RemoveMisleadingPath(vmtPointingTo.Replace("\\", "/").ToLower()), "vtf");
+        }
+
+        return fixedLocation;
+    }
+    private static string LocateInResources(string rawPath)
+    {
+        string fixedLocation = PatchNameInResources(RemoveMisleadingPath(rawPath.Replace("\\", "/").ToLower()), "png");
+
+        if (!plainTextures.ContainsKey(fixedLocation))
+        {
+            fixedLocation = PatchNameInResources(RemoveMisleadingPath(rawPath.Replace("\\", "/").ToLower()), "vmt");
+
+            string[] vmtLines = null;
+            if (vmtFiles.ContainsKey(fixedLocation + ".vmt"))
+            {
+                vmtLines = vmtFiles[fixedLocation + ".vmt"];
+            }
+            string vmtPointingTo = GetLocationFromVMT(vmtLines);
+            if (vmtPointingTo.Length > 0) fixedLocation = PatchNameInResources(RemoveMisleadingPath(vmtPointingTo.Replace("\\", "/").ToLower()), "png");
+        }
+
+        return fixedLocation;
+    }
+    private static string GetLocationFromVMT(string[] vmtLines)
+    {
+        string textureLocation = "";
+        
         if (vmtLines != null)
         {
             string baseTexture = "";
@@ -117,37 +167,271 @@ public class SourceTexture
             {
                 if (line.IndexOf("$") > -1)
                 {
-                    string materialInfo = line.Substring(line.IndexOf("$") + 1);
-                    if (materialInfo.IndexOf(" ") > -1 && materialInfo.IndexOf(" ") < materialInfo.IndexOf("\"") && materialInfo.Substring(0, materialInfo.IndexOf(" ")).Equals("basetexture", System.StringComparison.InvariantCultureIgnoreCase))
+                    if (line.IndexOf("//") < 0 || line.IndexOf("$") < line.IndexOf("//"))
                     {
-                        baseTexture = materialInfo.Substring(materialInfo.IndexOf(" ") + 1);
-                        if (baseTexture.IndexOf("\"") > -1) baseTexture = baseTexture.Substring(baseTexture.IndexOf("\"") + 1);
-                        if (baseTexture.IndexOf("\"") > -1) baseTexture = baseTexture.Substring(0, baseTexture.IndexOf("\""));
-                        break;
-                    }
-                    else if (materialInfo.IndexOf("\"") > -1 && materialInfo.IndexOf("\"") < materialInfo.IndexOf(" ") && materialInfo.Substring(0, materialInfo.IndexOf("\"")).Equals("basetexture", System.StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        baseTexture = materialInfo.Substring(materialInfo.IndexOf("\"") + 1);
-                        if (baseTexture.IndexOf("\"") > -1) baseTexture = baseTexture.Substring(baseTexture.IndexOf("\"") + 1);
-                        if (baseTexture.IndexOf("\"") > -1) baseTexture = baseTexture.Substring(0, baseTexture.IndexOf("\""));
-                        break;
+                        string materialInfo = line.Substring(line.IndexOf("$") + 1);
+                        if (materialInfo.ToLower().IndexOf("basetexture") > -1 && !char.IsLetter(materialInfo, materialInfo.ToLower().IndexOf("basetexture") + "basetexture".Length) && !char.IsNumber(materialInfo, materialInfo.ToLower().IndexOf("basetexture") + "basetexture".Length))
+                        {
+                            if (materialInfo.Length - materialInfo.Replace("\"", "").Length == 3)
+                            {
+                                baseTexture = materialInfo.Substring(materialInfo.IndexOf("\"") + 1);
+                                baseTexture = baseTexture.Substring(baseTexture.IndexOf("\"") + 1);
+                                baseTexture = baseTexture.Substring(0, baseTexture.IndexOf("\""));
+                            }
+                            else if (materialInfo.Length - materialInfo.Replace("\"", "").Length == 2)
+                            {
+                                baseTexture = materialInfo.Substring(materialInfo.IndexOf("\"") + 1);
+                                baseTexture = baseTexture.Substring(0, baseTexture.IndexOf("\""));
+                            }
+                        }
                     }
                 }
             }
 
-            baseTexture = RemoveMisleadingPath(baseTexture);
+            baseTexture = RemoveMisleadingPath(baseTexture.Replace("\\", "/").ToLower());
+            if (baseTexture.LastIndexOf(".") == baseTexture.Length - 4) baseTexture = baseTexture.Substring(0, baseTexture.LastIndexOf("."));
             if (baseTexture.Length > 0)
             {
-                //currentFace.textureLocation = texturesDir + baseTexture + ".png";
-                finalLocation = baseTexture;
+                textureLocation = baseTexture;
             }
         }
 
-        //currentFace.textureLocation = PatchName(currentFace.textureLocation);
-        if (Directory.Exists(ApplicationPreferences.texturesDir)) finalLocation = PatchName(ApplicationPreferences.texturesDir, RemoveMisleadingPath(finalLocation), "png");
-        else finalLocation = PatchName(RemoveMisleadingPath(finalLocation), "png");
+        return textureLocation;
+    }
 
-        return finalLocation;
+    /// <summary>
+    /// Tries to find the file specified by the original string
+    /// within the rootPath string directory with the extension
+    /// provided as ext. Starting with the full file name, then
+    /// removing one character at a time, and finally returning
+    /// the string of the file found.
+    /// </summary>
+    /// <param name="rootPath">The root directory path containing all materials</param>
+    /// <param name="original">The file path within the root directory</param>
+    /// <param name="ext">The extension of the file</param>
+    /// <returns>The file path of a file with the closest name in the same directory</returns>
+    public static string PatchNameInFileSystem(string original, params string[] ext)
+    {
+        string path = ApplicationPreferences.texturesDir.Replace("\\", "/").ToLower();
+        string prep = original.Replace("\\", "/").ToLower();
+        if (prep.IndexOf("/") == 0) prep = prep.Substring(1);
+
+        string subDir = "";
+        List<string> extensions = new List<string>();
+        string patched = "";
+        extensions.AddRange(ext);
+
+        if (prep.LastIndexOf("/") > -1)
+        {
+            subDir = prep.Substring(0, prep.LastIndexOf("/") + 1);
+            patched = prep.Substring(prep.LastIndexOf("/") + 1);
+        }
+        else patched = prep;
+
+        //if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions.Add("txt");
+
+        while (patched.Length > 3)
+        {
+            try
+            {
+                bool found = false;
+                foreach (string extension in extensions)
+                {
+                    if (File.Exists(path + subDir + patched + "." + extension)) { prep = subDir + patched; found = true; break; }
+                }
+                if (found) break;
+            }
+            catch (System.Exception e)
+            {
+                Debug.Log(e.Message);
+            }
+
+            patched = patched.Substring(0, patched.Length - 1);
+        }
+
+        return prep;
+    }
+    public static string PatchNameInVPK(string original, params string[] ext)
+    {
+        //string path = rootPath.Replace("\\", "/").ToLower();
+        string prep = original.Replace("\\", "/").ToLower();
+        if (prep.IndexOf("/") == 0) prep = prep.Substring(1);
+
+        string subDir = "";
+        List<string> extensions = new List<string>();
+        string patched = "";
+        extensions.AddRange(ext);
+
+        if (prep.LastIndexOf("/") > -1)
+        {
+            subDir = prep.Substring(0, prep.LastIndexOf("/") + 1);
+            patched = prep.Substring(prep.LastIndexOf("/") + 1);
+        }
+        else patched = prep;
+
+        //bool texturesLookup = true;
+        //if (extensions.IndexOf("vmt") > -1 || extensions.IndexOf("txt") > -1) texturesLookup = false;
+        //if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions[0] = "txt";
+
+        while (patched.Length > 0)
+        {
+            try
+            {
+                bool found = false;
+                foreach (string extension in extensions)
+                {
+                    if (ApplicationPreferences.vpkParser.FileExists("/materials/" + subDir + patched + "." + extension)) { prep = subDir + patched; found = true; break; }
+                }
+                if (found) break;
+            }
+            catch (System.Exception e)
+            {
+                Debug.Log(e.Message);
+            }
+
+            patched = patched.Substring(0, patched.Length - 1);
+        }
+
+        return prep;
+    }
+    /// <summary>
+    /// Tries to find the file specified by the original string
+    /// within the resources with the extension provided by ext.
+    /// Starting with the full file name, then removing one
+    /// character at a time, and finally returning the string
+    /// of the file found.
+    /// </summary>
+    /// <param name="original">The file path within the resources</param>
+    /// <param name="ext">The extension of the file</param>
+    /// <returns>The file path of a file with the closest name in the same directory</returns>
+    public static string PatchNameInResources(string original, params string[] ext)
+    {
+        //string path = rootPath.Replace("\\", "/").ToLower();
+        string prep = original.Replace("\\", "/").ToLower();
+        if (prep.IndexOf("/") == 0) prep = prep.Substring(1);
+
+        string subDir = "";
+        List<string> extensions = new List<string>();
+        string patched = "";
+        extensions.AddRange(ext);
+
+        if (prep.LastIndexOf("/") > -1)
+        {
+            subDir = prep.Substring(0, prep.LastIndexOf("/") + 1);
+            patched = prep.Substring(prep.LastIndexOf("/") + 1);
+        }
+        else patched = prep;
+
+        bool texturesLookup = true;
+        if (extensions.IndexOf("vmt") > -1 || extensions.IndexOf("txt") > -1) texturesLookup = false;
+        //if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions[0] = "txt";
+
+        while (patched.Length > 0)
+        {
+            try
+            {
+                bool found = false;
+                foreach (string extension in extensions)
+                {
+                    if (texturesLookup) { if (plainTextures.ContainsKey(subDir + patched + "." + extension)) { prep = subDir + patched; found = true; break; } }
+                    else { if (vmtFiles.ContainsKey(subDir + patched + "." + extension)) { prep = subDir + patched; found = true; break; } }
+                }
+                if (found) break;
+            }
+            catch (System.Exception e)
+            {
+                Debug.Log(e.Message);
+            }
+
+            patched = patched.Substring(0, patched.Length - 1);
+        }
+
+        return prep;
+    }
+    /// <summary>
+    /// Removes "maps/" from the path and underscore
+    /// </summary>
+    /// <param name="original">The path of the texture</param>
+    /// <returns>A non misleading path</returns>
+    public static string RemoveMisleadingPath(string original)
+    {
+        string goodPath = original.Replace("\\", "/").ToLower();
+        if (goodPath.IndexOf("maps/") > -1)
+        {
+            goodPath = goodPath.Substring(goodPath.IndexOf("maps/") + ("maps/").Length);
+            goodPath = goodPath.Substring(goodPath.IndexOf("/") + 1);
+            if(goodPath.IndexOf("_-") > -1)
+            {
+                string underscoreDashPhenomenon = goodPath.Substring(goodPath.LastIndexOf("_-") + 2);
+                goodPath = goodPath.Substring(0, goodPath.LastIndexOf("_-"));
+                if (underscoreDashPhenomenon.IndexOf("_") < 0)
+                {
+                    if (goodPath.IndexOf("_") > -1) goodPath = goodPath.Substring(0, goodPath.LastIndexOf("_"));
+                    if (goodPath.IndexOf("_") > -1) goodPath = goodPath.Substring(0, goodPath.LastIndexOf("_"));
+                }
+            }
+            //while (goodPath.LastIndexOf("_") > -1 && (goodPath.Substring(goodPath.LastIndexOf("_") + 1).StartsWith("-") || char.IsDigit(goodPath.Substring(goodPath.LastIndexOf("_") + 1)[0])))
+            //{
+            //    goodPath = goodPath.Substring(0, goodPath.LastIndexOf("_"));
+            //}
+        }
+
+        return goodPath.ToString();
+    }
+    public static void DecreaseTextureSize(Texture2D texture, float maxSize)
+    {
+        if (Mathf.Max(texture.width, texture.height) > maxSize)
+        {
+            float ratio = Mathf.Max(texture.width, texture.height) / maxSize;
+            int decreasedWidth = (int)(texture.width / ratio), decreasedHeight = (int)(texture.height / ratio);
+
+            TextureScale.Point(texture, decreasedWidth, decreasedHeight);
+        }
+    }
+    public static void AverageTexture(Texture2D original)
+    {
+        Color allColorsInOne = new Color();
+        Color[] originalColors = original.GetPixels();
+
+        foreach (Color color in originalColors)
+        {
+            allColorsInOne.r += color.r;
+            allColorsInOne.g += color.g;
+            allColorsInOne.b += color.b;
+            allColorsInOne.a += color.a;
+        }
+
+        allColorsInOne.r /= originalColors.Length;
+        allColorsInOne.g /= originalColors.Length;
+        allColorsInOne.b /= originalColors.Length;
+        allColorsInOne.a /= originalColors.Length;
+
+        original.Resize(16, 16);
+        Color[] newColors = original.GetPixels();
+        for (int i = 0; i < newColors.Length; i++)
+        {
+            newColors[i] = allColorsInOne;
+        }
+
+        original.wrapMode = TextureWrapMode.Clamp;
+        original.SetPixels(newColors);
+        original.Apply();
+    }
+
+    public static string[] ReadAllLines(byte[] fileData, System.Text.Encoding encoding, bool detectEncodingFromFile)
+    {
+        MemoryStream byteStream = new MemoryStream(fileData);
+        //StreamReader streamReader = new StreamReader(byteStream, encoding, detectEncodingFromFile);
+        StreamReader streamReader = new StreamReader(byteStream);
+        List<string> lines = new List<string>();
+        string line;
+        while((line = streamReader.ReadLine()) != null)
+        {
+            lines.Add(line);
+        }
+        byteStream.Close();
+        streamReader.Close();
+        return lines.ToArray();
     }
 
     public static void LoadDefaults()
@@ -222,29 +506,29 @@ public class SourceTexture
         if (vtfBytes != null)
         {
             MemoryStream stream = new MemoryStream(vtfBytes);
-            Debug.Log("File Size: " + vtfBytes.Length + ", " + stream.Length);
-            int signature = FileReader.ReadInt(stream); //+4=4
+            //Debug.Log("File Size: " + vtfBytes.Length + ", " + stream.Length);
+            int signature = DataParser.ReadInt(stream); //+4=4
             if (signature == VTFHeader.signature)
             {
                 #region Read Header
                 VTFHeader vtfHeader;
-                uint[] version = new uint[] { FileReader.ReadUInt(stream), FileReader.ReadUInt(stream) };
+                uint[] version = new uint[] { DataParser.ReadUInt(stream), DataParser.ReadUInt(stream) };
                 vtfHeader.version = (version[0]) + (version[1] / 10f); //+8=12
-                vtfHeader.headerSize = FileReader.ReadUInt(stream); //+4=16
-                vtfHeader.width = FileReader.ReadUShort(stream); //+2=18
-                vtfHeader.height = FileReader.ReadUShort(stream); //+2=20
-                vtfHeader.flags = FileReader.ReadUInt(stream); //+4=24
-                vtfHeader.frames = FileReader.ReadUShort(stream); //+2=26
-                vtfHeader.firstFrame = FileReader.ReadUShort(stream); //+2=28
-                vtfHeader.padding0 = FileReader.ReadBytes(stream, 4); //+4=32
-                vtfHeader.reflectivity = new float[] { FileReader.ReadFloat(stream), FileReader.ReadFloat(stream), FileReader.ReadFloat(stream) }; //+12=44
-                vtfHeader.padding1 = FileReader.ReadBytes(stream, 4); //+4=48
-                vtfHeader.bumpmapScale = FileReader.ReadFloat(stream); //+4=52
-                vtfHeader.highResImageFormat = (VTFImageFormat)FileReader.ReadUInt(stream); //+4=56
-                vtfHeader.mipmapCount = FileReader.ReadByte(stream); //+1=57
-                vtfHeader.lowResImageFormat = (VTFImageFormat)FileReader.ReadUInt(stream); //+4=61
-                vtfHeader.lowResImageWidth = FileReader.ReadByte(stream); //+1=62
-                vtfHeader.lowResImageHeight = FileReader.ReadByte(stream); //+1=63
+                vtfHeader.headerSize = DataParser.ReadUInt(stream); //+4=16
+                vtfHeader.width = DataParser.ReadUShort(stream); //+2=18
+                vtfHeader.height = DataParser.ReadUShort(stream); //+2=20
+                vtfHeader.flags = DataParser.ReadUInt(stream); //+4=24
+                vtfHeader.frames = DataParser.ReadUShort(stream); //+2=26
+                vtfHeader.firstFrame = DataParser.ReadUShort(stream); //+2=28
+                vtfHeader.padding0 = DataParser.ReadBytes(stream, 4); //+4=32
+                vtfHeader.reflectivity = new float[] { DataParser.ReadFloat(stream), DataParser.ReadFloat(stream), DataParser.ReadFloat(stream) }; //+12=44
+                vtfHeader.padding1 = DataParser.ReadBytes(stream, 4); //+4=48
+                vtfHeader.bumpmapScale = DataParser.ReadFloat(stream); //+4=52
+                vtfHeader.highResImageFormat = (VTFImageFormat)DataParser.ReadUInt(stream); //+4=56
+                vtfHeader.mipmapCount = DataParser.ReadByte(stream); //+1=57
+                vtfHeader.lowResImageFormat = (VTFImageFormat)DataParser.ReadUInt(stream); //+4=61
+                vtfHeader.lowResImageWidth = DataParser.ReadByte(stream); //+1=62
+                vtfHeader.lowResImageHeight = DataParser.ReadByte(stream); //+1=63
 
                 vtfHeader.depth = 1;
                 vtfHeader.resourceCount = 0;
@@ -252,29 +536,29 @@ public class SourceTexture
 
                 if (vtfHeader.version >= 7.2f)
                 {
-                    vtfHeader.depth = FileReader.ReadUShort(stream); //+2=65
+                    vtfHeader.depth = DataParser.ReadUShort(stream); //+2=65
 
                     if (vtfHeader.version >= 7.3)
                     {
-                        vtfHeader.padding2 = FileReader.ReadBytes(stream, 3); //+3=68
-                        vtfHeader.resourceCount = FileReader.ReadUInt(stream); //+4=72
+                        vtfHeader.padding2 = DataParser.ReadBytes(stream, 3); //+3=68
+                        vtfHeader.resourceCount = DataParser.ReadUInt(stream); //+4=72
 
                         if (vtfHeader.version >= 7.4)
                         {
-                            vtfHeader.padding3 = FileReader.ReadBytes(stream, 8); //+8=80
+                            vtfHeader.padding3 = DataParser.ReadBytes(stream, 8); //+8=80
                             vtfHeader.resources = new VTFResource[vtfHeader.resourceCount];
                             for (int i = 0; i < vtfHeader.resources.Length; i++)
                             {
-                                vtfHeader.resources[i].type = FileReader.ReadUInt(stream);
+                                vtfHeader.resources[i].type = DataParser.ReadUInt(stream);
                                 //vtfHeader.resources[i].id = FileReader.ReadBytes(stream, 3);
                                 //vtfHeader.resources[i].flags = FileReader.ReadByte(stream);
-                                vtfHeader.resources[i].data = FileReader.ReadUInt(stream);
+                                vtfHeader.resources[i].data = DataParser.ReadUInt(stream);
                             } //+(8*resourceCount)=76+(8*resourcesCount)
                         }
                     }
                 }
 
-                Debug.Log(vtfHeader.version + ", " + vtfHeader.headerSize + ", " + vtfHeader.width + ", " + vtfHeader.height + ", " + vtfHeader.flags + ", " + vtfHeader.frames + ", " + vtfHeader.firstFrame + ", " + vtfHeader.bumpmapScale + ", " + vtfHeader.highResImageFormat + ", " + vtfHeader.mipmapCount + ", " + vtfHeader.lowResImageFormat + ", " + vtfHeader.lowResImageWidth + ", " + vtfHeader.lowResImageHeight + ", " + vtfHeader.depth + ", " + vtfHeader.resourceCount);
+                //Debug.Log(vtfHeader.version + ", " + vtfHeader.headerSize + ", " + vtfHeader.width + ", " + vtfHeader.height + ", " + vtfHeader.flags + ", " + vtfHeader.frames + ", " + vtfHeader.firstFrame + ", " + vtfHeader.bumpmapScale + ", " + vtfHeader.highResImageFormat + ", " + vtfHeader.mipmapCount + ", " + vtfHeader.lowResImageFormat + ", " + vtfHeader.lowResImageWidth + ", " + vtfHeader.lowResImageHeight + ", " + vtfHeader.depth + ", " + vtfHeader.resourceCount);
                 #endregion
 
                 uint thumbnailBufferSize = 0, imageBufferSize = ComputeImageBufferSize(vtfHeader.width, vtfHeader.height, vtfHeader.depth, vtfHeader.mipmapCount, vtfHeader.highResImageFormat) * vtfHeader.frames;
@@ -287,7 +571,7 @@ public class SourceTexture
                 {
                     for (int i = 0; i < vtfHeader.resources.Length; i++)
                     {
-                        Debug.Log(vtfHeader.resources[i].data + ", " + (VTFResourceEntryType)vtfHeader.resources[i].type + ", " + (VTFResourceEntryFlag)vtfHeader.resources[i].flags);
+                        //Debug.Log(vtfHeader.resources[i].data + ", " + (VTFResourceEntryType)vtfHeader.resources[i].type + ", " + (VTFResourceEntryFlag)vtfHeader.resources[i].flags);
                         if ((VTFResourceEntryType)vtfHeader.resources[i].type == VTFResourceEntryType.VTF_LEGACY_RSRC_LOW_RES_IMAGE)
                         {
                             thumbnailBufferOffset = vtfHeader.resources[i].data;
@@ -313,8 +597,8 @@ public class SourceTexture
                         mipmapBufferOffset += ComputeMipmapSize(vtfHeader.width, vtfHeader.height, vtfHeader.depth, i, vtfHeader.highResImageFormat);
                     }
                     stream.Position = imageBufferOffset + mipmapBufferOffset;
-                    byte[] imageData = FileReader.ReadBytes(stream, (int)imageBufferSize);
-                    Debug.Log("Image Buffer Info: " + imageBufferOffset + ", " + imageBufferSize);
+                    byte[] imageData = DataParser.ReadBytes(stream, (int)imageBufferSize);
+                    //Debug.Log("Image Buffer Info: " + imageBufferOffset + ", " + imageBufferSize);
 
                     Color[] vtfColors = DecompressImage(imageData, vtfHeader.width, vtfHeader.height, vtfHeader.highResImageFormat);
 
@@ -644,170 +928,6 @@ public class SourceTexture
             }
         }
         return proper;
-    }
-
-    /// <summary>
-    /// Tries to find the file specified by the original string
-    /// within the rootPath string directory with the extension
-    /// provided as ext. Starting with the full file name, then
-    /// removing one character at a time, and finally returning
-    /// the string of the file found.
-    /// </summary>
-    /// <param name="rootPath">The root directory path containing all materials</param>
-    /// <param name="original">The file path within the root directory</param>
-    /// <param name="ext">The extension of the file</param>
-    /// <returns>The file path of a file with the closest name in the same directory</returns>
-    public static string PatchName(string rootPath, string original, string ext)
-    {
-        string path = rootPath.Replace("\\", "/").ToLower();
-        string prep = original.Replace("\\", "/").ToLower();
-        if (prep.IndexOf("/") == 0) prep = prep.Substring(1);
-
-        string subDir = "";
-        List<string> extensions = new List<string>();
-        string patched = "";
-        extensions.Add(ext);
-
-        if (prep.LastIndexOf("/") > -1)
-        {
-            subDir = prep.Substring(0, prep.LastIndexOf("/"));
-            patched = prep.Substring(prep.LastIndexOf("/") + 1);
-        }
-        else patched = prep;
-
-        if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions.Add("txt");
-
-        while (patched.Length > 0)
-        {
-            try
-            {
-                bool found = false;
-                foreach (string extension in extensions)
-                {
-                    if (File.Exists(path + subDir + "/" + patched + "." + extension)) { prep = subDir + "/" + patched; found = true; break; }
-                }
-                if (found) break;
-            }
-            catch (System.Exception e)
-            {
-                Debug.Log(e.Message);
-            }
-
-            patched = patched.Substring(0, patched.Length - 1);
-        }
-
-        return prep;
-    }
-    /// <summary>
-    /// Tries to find the file specified by the original string
-    /// within the resources with the extension provided by ext.
-    /// Starting with the full file name, then removing one
-    /// character at a time, and finally returning the string
-    /// of the file found.
-    /// </summary>
-    /// <param name="original">The file path within the resources</param>
-    /// <param name="ext">The extension of the file</param>
-    /// <returns>The file path of a file with the closest name in the same directory</returns>
-    public static string PatchName(string original, string ext)
-    {
-        //string path = rootPath.Replace("\\", "/").ToLower();
-        string prep = original.Replace("\\", "/").ToLower();
-        if (prep.IndexOf("/") == 0) prep = prep.Substring(1);
-
-        string subDir = "";
-        List<string> extensions = new List<string>();
-        string patched = "";
-        extensions.Add(ext);
-
-        if (prep.LastIndexOf("/") > -1)
-        {
-            subDir = prep.Substring(0, prep.LastIndexOf("/"));
-            patched = prep.Substring(prep.LastIndexOf("/") + 1);
-        }
-        else patched = prep;
-
-        if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions[0] = "txt";
-
-        while (patched.Length > 0)
-        {
-            try
-            {
-                bool found = false;
-                //foreach (string extension in extensions)
-                //{
-                if (Resources.Load(subDir + "/" + patched) != null) { prep = subDir + "/" + patched; found = true; break; }
-                //}
-                if (found) break;
-            }
-            catch (System.Exception e)
-            {
-                Debug.Log(e.Message);
-            }
-
-            patched = patched.Substring(0, patched.Length - 1);
-        }
-
-        return prep;
-    }
-    /// <summary>
-    /// Removes "maps/" from the path and underscore for some reason,
-    /// should have commented this earlier
-    /// </summary>
-    /// <param name="original">The path of the texture</param>
-    /// <returns>A non misleading path</returns>
-    public static string RemoveMisleadingPath(string original)
-    {
-        string goodPath = original.Substring(0);
-        if (goodPath.IndexOf("maps/") > -1)
-        {
-            goodPath = goodPath.Substring(goodPath.IndexOf("maps/") + ("maps/").Length);
-            goodPath = goodPath.Substring(goodPath.IndexOf("/") + 1);
-            while (goodPath.LastIndexOf("_") > -1 && (goodPath.Substring(goodPath.LastIndexOf("_") + 1).StartsWith("-") || char.IsDigit(goodPath.Substring(goodPath.LastIndexOf("_") + 1)[0])))
-            {
-                goodPath = goodPath.Substring(0, goodPath.LastIndexOf("_"));
-            }
-        }
-
-        return goodPath.ToString();
-    }
-    public static void DecreaseTextureSize(Texture2D texture, float maxSize)
-    {
-        if (Mathf.Max(texture.width, texture.height) > maxSize)
-        {
-            float ratio = Mathf.Max(texture.width, texture.height) / maxSize;
-            int decreasedWidth = (int)(texture.width / ratio), decreasedHeight = (int)(texture.height / ratio);
-
-            TextureScale.Point(texture, decreasedWidth, decreasedHeight);
-        }
-    }
-    public static void AverageTexture(Texture2D original)
-    {
-        Color allColorsInOne = new Color();
-        Color[] originalColors = original.GetPixels();
-
-        foreach (Color color in originalColors)
-        {
-            allColorsInOne.r += color.r;
-            allColorsInOne.g += color.g;
-            allColorsInOne.b += color.b;
-            allColorsInOne.a += color.a;
-        }
-
-        allColorsInOne.r /= originalColors.Length;
-        allColorsInOne.g /= originalColors.Length;
-        allColorsInOne.b /= originalColors.Length;
-        allColorsInOne.a /= originalColors.Length;
-
-        original.Resize(16, 16);
-        Color[] newColors = original.GetPixels();
-        for (int i = 0; i < newColors.Length; i++)
-        {
-            newColors[i] = allColorsInOne;
-        }
-
-        original.wrapMode = TextureWrapMode.Clamp;
-        original.SetPixels(newColors);
-        original.Apply();
     }
 
     #region Image Convert Info

@@ -2,9 +2,9 @@
 //using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+//using System.Linq;
 
-public class BSPMap
+public class BSPMap : UnityThreadJob
 {
     public readonly string[] undesiredTextures = new string[] { "TOOLS/TOOLSTRIGGER", "TOOLS/TOOLSBLACK", "TOOLS/CLIMB", "TOOLS/CLIMB_ALPHA", "TOOLS/FOGVOLUME", "TOOLS/TOOLSAREAPORTAL-DX10", "TOOLS/TOOLSBLACK", "TOOLS/TOOLSBLOCK_LOS",
                 "TOOLS/TOOLSBLOCK_LOS-DX10", "TOOLS/TOOLSBLOCKBOMB", "TOOLS/TOOLSBLOCKBULLETS", "TOOLS/TOOLSBLOCKBULLETS-DX10", "TOOLS/TOOLSBLOCKLIGHT", "TOOLS/TOOLSCLIP", "TOOLS/TOOLSCLIP-DX10", "TOOLS/TOOLSDOTTED", "TOOLS/TOOLSFOG", "TOOLS/TOOLSFOG-DX10",
@@ -67,15 +67,22 @@ public class BSPMap
     //    StartCoroutine("StartBuilding");
     //}
 
+    protected override void ThreadFunction()
+    {
+        BuildMap();
+    }
+
     public void BuildMap()
     {
+        ApplicationPreferences.UpdateVPKParser();
+
         //mapTextures = new List<Texture2D>();
         //textureLocations = new List<string>();
         bool usingPlainTextures = false;
 
         try
         {
-            Debug.Log(mapLocation + mapName + ".bsp");
+            //Debug.Log(mapLocation + mapName + ".bsp");
             if (mapLocation.Length > 0 && File.Exists(mapLocation + mapName + ".bsp")) mapFile = new FileStream(mapLocation + mapName + ".bsp", FileMode.Open);
             else if (File.Exists("Assets\\Resources\\Maps\\" + mapName + ".bsp")) mapFile = new FileStream("Assets\\Resources\\Maps\\" + mapName + ".bsp", FileMode.Open);
         }
@@ -93,7 +100,7 @@ public class BSPMap
                 modelName = modelName.Substring(0, modelName.LastIndexOf("."));
                 modelLocation = modelLocation.Substring(0, modelLocation.LastIndexOf("/"));
 
-                SourceModel.GrabModel(modelName, ApplicationPreferences.modelsDir + modelLocation);
+                SourceModel.GrabModel(modelName, modelLocation);
             }
             #endregion
 
@@ -200,7 +207,7 @@ public class BSPMap
                     modelName = modelName.Substring(0, modelName.LastIndexOf("."));
                     modelLocation = modelLocation.Substring(0, modelLocation.LastIndexOf("/"));
 
-                    SourceModel propModel = SourceModel.GrabModel(modelName, ApplicationPreferences.modelsDir + modelLocation);
+                    SourceModel propModel = SourceModel.GrabModel(modelName, modelLocation);
                     GameObject propModelGO = propModel.InstantiateGameObject();
                     propModelGO.transform.position = staticProps.staticPropInfo[i].Origin;
                     propModelGO.transform.localRotation = Quaternion.Euler(staticProps.staticPropInfo[i].Angles.x, staticProps.staticPropInfo[i].Angles.y + 0, staticProps.staticPropInfo[i].Angles.z);
@@ -220,7 +227,7 @@ public class BSPMap
                     modelName = modelName.Substring(0, modelName.LastIndexOf("."));
                     modelLocation = modelLocation.Substring(0, modelLocation.LastIndexOf("/"));
 
-                    SourceModel propModel = SourceModel.GrabModel(modelName, ApplicationPreferences.modelsDir + modelLocation);
+                    SourceModel propModel = SourceModel.GrabModel(modelName, modelLocation);
                     for (int j = 0; j < propModel.modelMeshes.Length; j++)
                     {
                         FaceMesh propMesh = new FaceMesh();
@@ -281,7 +288,7 @@ public class BSPMap
                     }
                 }
                 #endregion
-                Debug.Log("Created Atlas and Remapped UVs");
+                //Debug.Log("Created Atlas and Remapped UVs");
                 #region Calculate Minimum Submeshes Needed
                 List<List<int>> combinesIndices = new List<List<int>>();
                 combinesIndices.Add(new List<int>());
@@ -298,7 +305,7 @@ public class BSPMap
                     vertexCount += allFaces[i].mesh.vertices.Length;
                 }
                 #endregion
-                Debug.Log("Calculated Submeshes needed");
+                //Debug.Log("Calculated Submeshes needed");
                 #region Combine Meshes to Submeshes
                 if (combinesIndices.Count == 1)
                 {
@@ -314,6 +321,7 @@ public class BSPMap
                     combinedMesh.CombineMeshes(currentCombine);
                     mapGameObject.AddComponent<MeshFilter>().mesh = combinedMesh;
                     mapGameObject.AddComponent<MeshRenderer>().material = mapAtlas;
+                    mapGameObject.AddComponent<MeshCollider>();
                 }
                 else
                 {
@@ -346,14 +354,17 @@ public class BSPMap
             mapGameObject = Object.Instantiate(Resources.Load("Models/CSGOMaps/" + mapName)) as GameObject;
         }
 
-        //SaveUVValues("C:\\Users\\oxter\\Documents\\" + mapName + "_UV.txt");
+        #if UNITY_EDITOR
+        //MakeAsset();
+        //SaveUVValues("C:\\Users\\oxter\\Documents\\csgo\\csgoMapModels\\" + mapName + "_UV.txt");
+        #endif
     }
     private void ReadFile()
     {
         bsp = new BSPParser(mapFile);
 
         string entities = bsp.GetEntities();
-        Debug.Log("Map Entities: " + entities);
+        //Debug.Log("Map Entities: " + entities);
         vertices = bsp.GetVertices();
 
         //vertices = bsp.lumpData[3];
@@ -378,217 +389,16 @@ public class BSPMap
         mapFile.Close();
     }
 
-    public void SaveUVValues(string location)
-    {
-        List<string> lines = new List<string>();
-        foreach(Transform submesh in mapGameObject.transform)
-        {
-            lines.Add(submesh.name);
-            MeshFilter meshFilter = submesh.GetComponent<MeshFilter>();
-            if (meshFilter != null && meshFilter.mesh != null)
-            {
-                if(meshFilter.mesh.uv != null && meshFilter.mesh.uv.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv));
-                if (meshFilter.mesh.uv2 != null && meshFilter.mesh.uv2.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv2));
-                if (meshFilter.mesh.uv3 != null && meshFilter.mesh.uv3.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv3));
-                if (meshFilter.mesh.uv4 != null && meshFilter.mesh.uv4.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv4));
-            }
-            else lines.Add("None");
-        }
-
-        try
-        {
-            File.WriteAllLines(@location, lines.ToArray());
-        }
-        catch (System.Exception e) { Debug.Log(e.Message); }
-    }
-    private string MakeUVString(Vector2[] uvs)
-    {
-        string uvLine = "";
-        foreach (Vector2 uv in uvs)
-        {
-            uvLine += "(" + uv.x + "," + uv.y + ") ";
-        }
-        return uvLine;
-    }
-
     public static Texture2D[] GetTexturesAsArray()
     {
         Texture2D[] textures = new Texture2D[mapTextures.Count];
-        for(int i = 0; i < textures.Length; i++)
+        for (int i = 0; i < textures.Length; i++)
         {
             //textures[i] = mapTextures.ElementAt(i).Value.texture;
             textures[i] = mapTextures[i].texture;
         }
         return textures;
     }
-
-    /*private string PatchName(string original)
-    {
-        string prep = original.Replace("\\", "/");
-        string directory = "";
-        List<string> extensions = new List<string>();
-        string patched = "";
-        if (prep.LastIndexOf("/") > -1) directory = prep.Substring(0, prep.LastIndexOf("/") + 1);
-        if (prep.LastIndexOf(".") > -1) extensions.Add(prep.Substring(prep.LastIndexOf(".") + 1));
-        if (prep.LastIndexOf("/") > -1) patched = prep.Substring(prep.LastIndexOf("/") + 1);
-        if (patched.LastIndexOf(".") > -1) patched = patched.Substring(0, patched.LastIndexOf("."));
-        if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions.Add("txt");
-        //if (!Directory.Exists(directory)) Debug.Log(directory);
-        while (patched.Length > 0)
-        {
-            try
-            {
-                //if(extension.Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase) 
-                bool found = false;
-                foreach (string extension in extensions)
-                {
-                    if (File.Exists(directory + "/" + patched + "." + extension)) { prep = directory + "/" + patched + "." + extension; found = true; break; }
-                }
-                if (found) break;
-                //string[] matches = new string[0];
-                //if (Directory.Exists(directory)) matches = Directory.GetFiles(directory, patched + "." + extension);
-                //else break;
-                //if (matches.Length == 1) return matches[0].Replace("\\", "/").ToLower();
-                //else if (matches.Length > 1) break;
-            }
-            catch (System.Exception e)
-            {
-                Debug.Log(e.Message);
-            }
-            patched = patched.Substring(0, patched.Length - 1);
-        }
-
-        //if (!File.Exists(prep)) prep = original.Replace("\\", "/");
-        return prep;
-    }*/
-    /*private string PatchName(string rootPath, string original, string ext)
-    {
-        string path = rootPath.Replace("\\", "/").ToLower();
-        string prep = original.Replace("\\", "/").ToLower();
-        
-        string subDir = "";
-        List<string> extensions = new List<string>();
-        string patched = "";
-        extensions.Add(ext);
-
-        if (prep.LastIndexOf("/") > -1) subDir = prep.Substring(0, prep.LastIndexOf("/") + 1);
-        if (prep.LastIndexOf("/") > -1) patched = prep.Substring(prep.LastIndexOf("/") + 1);
-        else patched = prep;
-
-        if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions.Add("txt");
-
-        while (patched.Length > 0)
-        {
-            try
-            {
-                bool found = false;
-                foreach (string extension in extensions)
-                {
-                    if (File.Exists(path + subDir + "/" + patched + "." + extension)) { prep = subDir + "/" + patched; found = true; break; }
-                }
-                if (found) break;
-            }
-            catch (System.Exception e)
-            {
-                Debug.Log(e.Message);
-            }
-
-            patched = patched.Substring(0, patched.Length - 1);
-        }
-
-        return prep;
-    }
-    private string PatchName(string original, string ext)
-    {
-        //string path = rootPath.Replace("\\", "/").ToLower();
-        string prep = original.Replace("\\", "/").ToLower();
-
-        string subDir = "";
-        List<string> extensions = new List<string>();
-        string patched = "";
-        extensions.Add(ext);
-
-        if (prep.LastIndexOf("/") > -1) subDir = prep.Substring(0, prep.LastIndexOf("/") + 1);
-        if (prep.LastIndexOf("/") > -1) patched = prep.Substring(prep.LastIndexOf("/") + 1);
-        else patched = prep;
-
-        if (extensions.Count > 0 && extensions[0].Equals("vmt", System.StringComparison.InvariantCultureIgnoreCase)) extensions[0] = "txt";
-
-        while (patched.Length > 0)
-        {
-            try
-            {
-                bool found = false;
-                //foreach (string extension in extensions)
-                //{
-                    if (Resources.Load(subDir + "/" + patched) != null) { prep = subDir + "/" + patched; found = true; break; }
-                //}
-                if (found) break;
-            }
-            catch (System.Exception e)
-            {
-                Debug.Log(e.Message);
-            }
-
-            patched = patched.Substring(0, patched.Length - 1);
-        }
-
-        return prep;
-    }
-    private string RemoveMisleadingPath(string original)
-    {
-        string goodPath = original.Substring(0);
-        if (goodPath.IndexOf("maps/") > -1)
-        {
-            goodPath = goodPath.Substring(goodPath.IndexOf("maps/") + ("maps/").Length);
-            goodPath = goodPath.Substring(goodPath.IndexOf("/") + 1);
-            while (goodPath.LastIndexOf("_") > -1 && (goodPath.Substring(goodPath.LastIndexOf("_") + 1).StartsWith("-") || char.IsDigit(goodPath.Substring(goodPath.LastIndexOf("_") + 1)[0])))
-            {
-                goodPath = goodPath.Substring(0, goodPath.LastIndexOf("_"));
-            }
-        }
-
-        return goodPath.ToString();
-    }
-    public void DecreaseTextureSize(Texture2D texture, float maxSize)
-    {
-        if (Mathf.Max(texture.width, texture.height) > maxSize)
-        {
-            float ratio = Mathf.Max(texture.width, texture.height) / maxSize;
-            int decreasedWidth = (int)(texture.width / ratio), decreasedHeight = (int)(texture.height / ratio);
-
-            TextureScale.Point(texture, decreasedWidth, decreasedHeight);
-        }
-    }
-    public void AverageTexture(Texture2D original)
-    {
-        Color allColorsInOne = new Color();
-        Color[] originalColors = original.GetPixels();
-
-        foreach (Color color in originalColors)
-        {
-            allColorsInOne.r += color.r;
-            allColorsInOne.g += color.g;
-            allColorsInOne.b += color.b;
-            allColorsInOne.a += color.a;
-        }
-
-        allColorsInOne.r /= originalColors.Length;
-        allColorsInOne.g /= originalColors.Length;
-        allColorsInOne.b /= originalColors.Length;
-        allColorsInOne.a /= originalColors.Length;
-
-        original.Resize(16, 16);
-        Color[] newColors = original.GetPixels();
-        for (int i = 0; i < newColors.Length; i++)
-        {
-            newColors[i] = allColorsInOne;
-        }
-
-        original.wrapMode = TextureWrapMode.Clamp;
-        original.SetPixels(newColors);
-        original.Apply();
-    }*/
 
     public Mesh MakeFace(dface_t face)
     {
@@ -730,7 +540,7 @@ public class BSPMap
             #region Method 12 Triangulation
             for (int row = 0; row < power; row++)
             {
-                for(int col = 0; col < power; col++)
+                for (int col = 0; col < power; col++)
                 {
                     int currentLine = row * (power + 1);
                     int nextLineStart = (row + 1) * (power + 1);
@@ -801,7 +611,7 @@ public class BSPMap
 
     public void SetVisibility(bool visibleState)
     {
-        if(mapGameObject != null) RecursiveVisibillity(mapGameObject.transform, visibleState);
+        if (mapGameObject != null) RecursiveVisibillity(mapGameObject.transform, visibleState);
     }
     private void RecursiveVisibillity(Transform what, bool state)
     {
@@ -815,6 +625,74 @@ public class BSPMap
             }
         }
     }
+
+    #if UNITY_EDITOR
+    public void MakeAsset()
+    {
+        if (mapGameObject != null)
+        {
+            GameObject remadeMapGameObject = new GameObject(mapName);
+            Material atlasMaterial = new Material(Shader.Find("Custom/Atlas Tiling"));
+            UnityEditor.AssetDatabase.CreateFolder("Assets/Resources/Models", mapName);
+            UnityEditor.AssetDatabase.CreateFolder("Assets/Resources/Models/" + mapName, "Meshes");
+            UnityEditor.AssetDatabase.CreateFolder("Assets/Resources/Models/" + mapName, "Material");
+
+            foreach (Transform child in mapGameObject.transform)
+            {
+                atlasMaterial = child.GetComponent<MeshRenderer>().material;
+
+                Mesh partialMesh = child.GetComponent<MeshFilter>().mesh;
+                GameObject partialMapGameObject = new GameObject(child.name);
+                partialMapGameObject.AddComponent<MeshFilter>().mesh = partialMesh;
+                //partialMapGameObject.AddComponent<MeshRenderer>().material = atlasMaterial;
+                partialMapGameObject.AddComponent<MeshCollider>();
+                partialMapGameObject.transform.parent = remadeMapGameObject.transform;
+
+                UnityEditor.AssetDatabase.CreateAsset(partialMesh, "Assets/Resources/Models/" + mapName + "/Meshes/" + child.name + ".asset");
+            }
+            foreach(Transform child in remadeMapGameObject.transform) { child.gameObject.AddComponent<MeshRenderer>().material = atlasMaterial; }
+
+            UnityEditor.AssetDatabase.CreateAsset(atlasMaterial.mainTexture, "Assets/Resources/Models/" + mapName + "/Material/TextureAtlas.asset");
+            UnityEditor.AssetDatabase.CreateAsset(atlasMaterial, "Assets/Resources/Models/" + mapName + "/Material/AtlasMaterial.asset");
+            UnityEditor.PrefabUtility.CreatePrefab("Assets/Resources/Models/" + mapName + "/" + mapName + ".prefab", remadeMapGameObject);
+        }
+    }
+
+    public void SaveUVValues(string location)
+    {
+        List<string> lines = new List<string>();
+        foreach(Transform submesh in mapGameObject.transform)
+        {
+            lines.Add(submesh.name);
+            MeshFilter meshFilter = submesh.GetComponent<MeshFilter>();
+            if (meshFilter != null && meshFilter.mesh != null)
+            {
+                if (meshFilter.mesh.uv != null && meshFilter.mesh.uv.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv));
+                if (meshFilter.mesh.uv2 != null && meshFilter.mesh.uv2.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv2));
+                if (meshFilter.mesh.uv3 != null && meshFilter.mesh.uv3.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv3));
+                if (meshFilter.mesh.uv4 != null && meshFilter.mesh.uv4.Length > 0) lines.Add(MakeUVString(meshFilter.mesh.uv4));
+            }
+            else lines.Add("None");
+        }
+
+        try
+        {
+            File.WriteAllLines(@location, lines.ToArray());
+        }
+        catch (System.Exception e) { Debug.Log(e.Message); }
+    }
+    private string MakeUVString(Vector2[] uvs)
+    {
+        string uvLine = "";
+        string[] uvElements = System.Array.ConvertAll(uvs, element => element.ToString().Replace(" ", ""));
+        uvLine = string.Join(" ", uvElements);
+        //foreach (Vector2 uv in uvs)
+        //{
+        //    uvLine += "(" + uv.x + "," + uv.y + ") ";
+        //}
+        return uvLine;
+    }
+    #endif
 }
 
 public class FaceMesh
