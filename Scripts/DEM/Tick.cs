@@ -9,7 +9,7 @@ public class Tick
     public DemoCommand command;
     public int tickNumber;
     public byte playerSlot;
-    public int size;
+    public uint size;
     public int messageType;
     #endregion
 
@@ -28,16 +28,16 @@ public class Tick
         }
         else if (command == DemoCommand.Signon || command == DemoCommand.Packet)
         {
-            int currentIndex = 0, bytesRead = 0;
+            uint currentIndex = 0, bytesRead = 0;
             while (currentIndex < data.Length)
             {
                 messageType = 0;
-                int length = 0;
+                uint length = 0;
                 if (data != null)
                 {
                     messageType = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
                     currentIndex += bytesRead; bytesRead = 0;
-                    length = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
+                    length = (uint)DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
                     currentIndex += bytesRead; bytesRead = 0;
                 }
                 //Debug.Log("Number: " + tickNumber + " Command: " + command + "\nMessageType: " + (messageType >= 8 ? ((SVC_Messages)messageType).ToString() : ((NET_Messages)messageType).ToString()) + " MessageLength: " + length);
@@ -75,11 +75,11 @@ public class Tick
     #region Message Parsers
     private void ParseDataTables(byte[] data)
     {
-        DataTables dataTables = DataTables.Parse(data);
+        demo.dataTables = DataTables.Parse(data);
 
-        MapEquipment(dataTables);
+        MapEquipment(demo.dataTables);
 
-        BindEntities(dataTables);
+        BindEntities(demo.dataTables);
     }
     private void MapEquipment(DataTables dataTables)
     {
@@ -100,14 +100,14 @@ public class Tick
     }
     private void ParsePacketEntities(byte[] data)
     {
-
+        PacketEntities.Parse(data, this);
     }
     private void ParseGameEventList(byte[] data)
     {
         demo.gameEventDescriptors = new Dictionary<int, EventDescriptor>();
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead = 0;
 
         while (currentIndex < data.Length)
         {
@@ -118,22 +118,22 @@ public class Tick
 
             if (wireType != 2 || fieldNum != 1) throw new Exception("GameEventList: WireType must equal 2 and FieldNum must equal 1");
 
-            int descriptorLength = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
+            uint descriptorLength = (uint)DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
             currentIndex += bytesRead; bytesRead = 0;
             EventDescriptor descriptor = EventDescriptor.Parse(DataParser.ReadBytes(data, currentIndex, descriptorLength));
             demo.gameEventDescriptors.Add(descriptor.eventID, descriptor);
             currentIndex += descriptorLength;
         }
 
-        /*for(int i = 0; i < demo.gameEventDescriptors.Count; i++)
-        {
-            string eventDebug = demo.gameEventDescriptors.Keys.ElementAt(i) + ": " + demo.gameEventDescriptors.Values.ElementAt(i).name + "\n";
-            for(int j = 0; j < demo.gameEventDescriptors.Values.ElementAt(i).keys.Length; j++)
-            {
-                eventDebug += "\n" + demo.gameEventDescriptors.Values.ElementAt(i).keys[j].name;
-            }
-            Debug.Log(eventDebug);
-        }*/
+        //for(int i = 0; i < demo.gameEventDescriptors.Count; i++)
+        //{
+        //    string eventDebug = demo.gameEventDescriptors.Keys.ElementAt(i) + ": " + demo.gameEventDescriptors.Values.ElementAt(i).name + "\n";
+        //    for(int j = 0; j < demo.gameEventDescriptors.Values.ElementAt(i).keys.Length; j++)
+        //    {
+        //        eventDebug += "\n" + demo.gameEventDescriptors.Values.ElementAt(i).keys[j].name;
+        //    }
+        //    Debug.Log(eventDebug);
+        //}
     }
     private void ParseGameEvent(byte[] data)
     {
@@ -150,62 +150,60 @@ public class Tick
         #region Event Handling
         //Used Events in BlazingBlace: 163 21 9 27 229 125 11 151 153 24 23 164 129 234 154 128 152 165 181 148 107 36 149 106 50 13 14 168 40 139 190 178 42 66 44 157 156 101 15 103 124 126 158 159 112 105 7 216 166 39 110 37 179 92
         #region Events used in recent Replay
-        /*
-        player_footstep (int userid = 6)
-        weapon_fire (int userid = 3, string weapon = weapon_m4a1, bool silenced = False)
-        player_hurt (int userid = 12, int attacker = 3, int health = 68, int armor = 0, string weapon = m4a1, int dmg_health = 32, int dmg_armor = 0, int hitgroup = 2)
-        player_death (int userid = 12, int attacker = 3, int assister = 0, string weapon = m4a1, int weapon_itemid = 0, int weapon_fauxitemid = 18446744069414584336, int weapon_originalowner_xuid = 76561198122821247, bool headshot = True, int dominated = 0, int revenge = 0, int penetrated = 0, bool noreplay = False)
-        weapon_zoom (int userid = 10)
-        player_jump (int userid = 3)
-        hltv_status (int clients = 0, int slots = 50, int proxies = 0, ? master = , int externaltotal = 0, int externallinked = 0)
-        player_spawn (int userid = 12, int teamnum = 3)
-        hltv_chase (int target1 = 2, int target2 = 11, int distance = 96, int theta = -30, int phi = -20, int inertia = 0, int ineye = 1)
-        weapon_reload (int userid = 12)
-        weapon_fire_on_empty (int userid = 12, string weapon = weapon_m4a1)
-        player_team (int userid = 8, int team = 3, int oldteam = 0, bool disconnect = False, bool autoteam = False, bool silent = False, bool isbot = False)
-        player_disconnect (int userid = 20, string reason = Kicked by Console, string name Yogi, string networkid BOT)
-        decoy_started (int userid = 12, int entityid = 480, float x = 775.8956, float y = 2075.691, float z = 193.1547)
-        decoy_detonate (int userid = 12, int entityid = 480, float x = 775.8956, float y = 2075.691, float z = 193.1547)
-        cs_pre_restart ()
-        round_prestart ()
-        bomb_pickup (int userid = 7)
-        round_start (int timelimit = 115, int fraglimit = 0, string objective = BOMB TARGET)
-        round_poststart ()
-        begin_new_match ()
-        cs_round_start_beep ()
-        cs_round_final_beep ()
-        round_freeze_end ()
-        round_announce_match_start ()
-        other_death (int otherid = 97, string othertype = chicken, int attacker = 5, string weapon = knife_t, int weapon_itemid = 0, int weapon_fauxitemid = 18446744069414584379, int weapon_originalowner_xuid = 76561198138395904, bool headshot = False, int penetrated = 0)
-        flashbang_detonate (int userid = 10, int entityid = 112, float x = 116.3785, float y = 1348.125, float z = 125.1487)
-        player_blind (int userid = 5)
-        buytime_ended ()
-        bomb_dropped (int userid = 7, int entindex = 610)
-        round_mvp (int userid = 4, int reason = 1, int musickkitmvps = 0)
-        cs_win_panel_round (bool show_timer_defend = False, bool show_timer_attack = True, int timer_time = 41, int final_event = 8, string funfact_token = #funfact_kills_headshots, int funfact_player = 3, int funfact_data1 = 4, int funfact_data2 = 0, int funfact_data3 = 0)
-        round_end (int winner = 3, int reason = 8, string message = #SFUI_Notice_CTs_Win, int legacy = 0, int player_count = 0)
-        round_officially_ended ()
-        hegrenade_detonate (int userid = 4, int entityid = 140, float x = 82.71462, float y = 1288.01, float z = 108.7554)
-        smokegrenade_detonate (int userid = 10, int entityid = 121, float x = 124.7404, float y = 1538.201, float z = 104.3713)
-        smokegrenade_expired (int userid = 10, int entityid = 121, float x = 124.7404, float y = 1538.201, float z = 104.3713)
-        player_falldamage (int userid = 3, float damage = 5.775379)
-        bomb_beginplant (int userid = 5, int site = 380)
-        bomb_planted (int userid = 5, int site = 380)
-        bomb_beep (int entindex = 521)
-        inferno_startburn (int entityid = 109, float x = 716.717, float y = 1924.841, float z = 194.4628)
-        inferno_expire (int entityid = 109, float x = 716.717, float y = 1924.841, float z = 194.4628)
-        round_time_warning ()
-        player_connect (string name = Lester, int index = 9, int userid = 22, string networkid = BOT, ? address = )
-        round_announce_last_round_half ()
-        bot_takeover (int userid = 7, int botid = 22, int index = 5)
-        announce_phase_end ()
-        bomb_exploded (int userid = 3, int site = 414)
-        bomb_begindefuse (int userid = 3, bool haskit = False)
-        bomb_defused (int userid = 3, int site = 380)
-        round_announce_final ()
-        cs_win_panel_match ()
-        endmatch_cmm_start_reveal_items ()
-        */
+        //player_footstep (int userid = 6)
+        //weapon_fire (int userid = 3, string weapon = weapon_m4a1, bool silenced = False)
+        //player_hurt (int userid = 12, int attacker = 3, int health = 68, int armor = 0, string weapon = m4a1, int dmg_health = 32, int dmg_armor = 0, int hitgroup = 2)
+        //player_death (int userid = 12, int attacker = 3, int assister = 0, string weapon = m4a1, int weapon_itemid = 0, int weapon_fauxitemid = 18446744069414584336, int weapon_originalowner_xuid = 76561198122821247, bool headshot = True, int dominated = 0, int revenge = 0, int penetrated = 0, bool noreplay = False)
+        //weapon_zoom (int userid = 10)
+        //player_jump (int userid = 3)
+        //hltv_status (int clients = 0, int slots = 50, int proxies = 0, ? master = , int externaltotal = 0, int externallinked = 0)
+        //player_spawn (int userid = 12, int teamnum = 3)
+        //hltv_chase (int target1 = 2, int target2 = 11, int distance = 96, int theta = -30, int phi = -20, int inertia = 0, int ineye = 1)
+        //weapon_reload (int userid = 12)
+        //weapon_fire_on_empty (int userid = 12, string weapon = weapon_m4a1)
+        //player_team (int userid = 8, int team = 3, int oldteam = 0, bool disconnect = False, bool autoteam = False, bool silent = False, bool isbot = False)
+        //player_disconnect (int userid = 20, string reason = Kicked by Console, string name Yogi, string networkid BOT)
+        //decoy_started (int userid = 12, int entityid = 480, float x = 775.8956, float y = 2075.691, float z = 193.1547)
+        //decoy_detonate (int userid = 12, int entityid = 480, float x = 775.8956, float y = 2075.691, float z = 193.1547)
+        //cs_pre_restart ()
+        //round_prestart ()
+        //bomb_pickup (int userid = 7)
+        //round_start (int timelimit = 115, int fraglimit = 0, string objective = BOMB TARGET)
+        //round_poststart ()
+        //begin_new_match ()
+        //cs_round_start_beep ()
+        //cs_round_final_beep ()
+        //round_freeze_end ()
+        //round_announce_match_start ()
+        //other_death (int otherid = 97, string othertype = chicken, int attacker = 5, string weapon = knife_t, int weapon_itemid = 0, int weapon_fauxitemid = 18446744069414584379, int weapon_originalowner_xuid = 76561198138395904, bool headshot = False, int penetrated = 0)
+        //flashbang_detonate (int userid = 10, int entityid = 112, float x = 116.3785, float y = 1348.125, float z = 125.1487)
+        //player_blind (int userid = 5)
+        //buytime_ended ()
+        //bomb_dropped (int userid = 7, int entindex = 610)
+        //round_mvp (int userid = 4, int reason = 1, int musickkitmvps = 0)
+        //cs_win_panel_round (bool show_timer_defend = False, bool show_timer_attack = True, int timer_time = 41, int final_event = 8, string funfact_token = #funfact_kills_headshots, int funfact_player = 3, int funfact_data1 = 4, int funfact_data2 = 0, int funfact_data3 = 0)
+        //round_end (int winner = 3, int reason = 8, string message = #SFUI_Notice_CTs_Win, int legacy = 0, int player_count = 0)
+        //round_officially_ended ()
+        //hegrenade_detonate (int userid = 4, int entityid = 140, float x = 82.71462, float y = 1288.01, float z = 108.7554)
+        //smokegrenade_detonate (int userid = 10, int entityid = 121, float x = 124.7404, float y = 1538.201, float z = 104.3713)
+        //smokegrenade_expired (int userid = 10, int entityid = 121, float x = 124.7404, float y = 1538.201, float z = 104.3713)
+        //player_falldamage (int userid = 3, float damage = 5.775379)
+        //bomb_beginplant (int userid = 5, int site = 380)
+        //bomb_planted (int userid = 5, int site = 380)
+        //bomb_beep (int entindex = 521)
+        //inferno_startburn (int entityid = 109, float x = 716.717, float y = 1924.841, float z = 194.4628)
+        //inferno_expire (int entityid = 109, float x = 716.717, float y = 1924.841, float z = 194.4628)
+        //round_time_warning ()
+        //player_connect (string name = Lester, int index = 9, int userid = 22, string networkid = BOT, ? address = )
+        //round_announce_last_round_half ()
+        //bot_takeover (int userid = 7, int botid = 22, int index = 5)
+        //announce_phase_end ()
+        //bomb_exploded (int userid = 3, int site = 414)
+        //bomb_begindefuse (int userid = 3, bool haskit = False)
+        //bomb_defused (int userid = 3, int site = 380)
+        //round_announce_final ()
+        //cs_win_panel_match ()
+        //endmatch_cmm_start_reveal_items ()
         #endregion
         if (eventDescriptor.name == "achievement_earned") ; //66 player achievement
         else if (eventDescriptor.name == "achievement_earned_local") ; //186 achievement splitscreenplayer
@@ -454,7 +452,7 @@ public class Tick
     }
     private void ParseCreateStringTable(byte[] data)
     {
-
+        demo.stringTables.Add(StringTable.Parse(data, this));
     }
     private void ParseUpdateStringTable(byte[] data)
     {
@@ -474,12 +472,14 @@ public class DataTables
     List<ExcludeEntry> currentExcludes = new List<ExcludeEntry>();
     List<ServerClass> currentBaseClasses = new List<ServerClass>();
 
+    public int ClassBits { get { return serverClasses != null ? Mathf.CeilToInt(Mathf.Log(serverClasses.Length, 2)) : 0; } }
+
     public static DataTables Parse(byte[] data)
     {
         DataTables dataTables = new DataTables();
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead = 0;
 
         List<SendTable> sendTables = new List<SendTable>();
         List<ServerClass> serverClasses = new List<ServerClass>();
@@ -491,7 +491,7 @@ public class DataTables
             currentIndex += bytesRead; bytesRead = 0;
             if (type != SVC_Messages.svc_SendTable) throw new Exception("DataTables: Incorrect SVC Message type " + type + " should be SendTable");
 
-            int tableLength = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
+            uint tableLength = (uint)DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
             currentIndex += bytesRead; bytesRead = 0;
             SendTable sendTable = SendTable.Parse(DataParser.ReadBytes(data, currentIndex, tableLength));
             currentIndex += tableLength;
@@ -501,7 +501,7 @@ public class DataTables
             if (!endSendTable) sendTables.Add(sendTable);
         }
 
-        int serverClassCount = BitConverter.ToUInt16(data, currentIndex);
+        int serverClassCount = BitConverter.ToUInt16(data, (int)currentIndex);
         currentIndex += 2;
 
         //Debug.Log("SendTables: " + sendTables.Count + " ServerClasses: " + serverClassCount);
@@ -647,8 +647,8 @@ public class SendTable
         SendTable table = new SendTable();
         List<SendTableProperty> properties = new List<SendTableProperty>();
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead = 0;
         while(currentIndex < data.Length)
         {
             int desc = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
@@ -665,7 +665,7 @@ public class SendTable
                 }
                 else if (fieldNum == 4)
                 {
-                    int propertyLength = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
+                    uint propertyLength = (uint)DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
                     currentIndex += bytesRead; bytesRead = 0;
                     properties.Add(SendTableProperty.Parse(DataParser.ReadBytes(data, currentIndex, propertyLength)));
                     currentIndex += propertyLength;
@@ -690,12 +690,14 @@ public class SendTable
         }
         table.properties = properties.ToArray();
 
+        #region Debug
         string sendTableDebug = "SendTable: " + table.name + "\n";
         for (int i = 0; i < table.properties.Length; i++)
         {
             sendTableDebug += "\nType: " + table.properties[i].type + " Name: " + table.properties[i].name + " DataTableName: " + table.properties[i].dataTableName;
         }
-        Debug.Log(sendTableDebug);
+        //Debug.Log(sendTableDebug);
+        #endregion
         return table;
     }
 }
@@ -715,8 +717,8 @@ public class SendTableProperty
     {
         SendTableProperty property = new SendTableProperty();
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead = 0;
         while(currentIndex < data.Length)
         {
             int desc = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
@@ -766,7 +768,7 @@ public class SendTableProperty
             }
             else if (wireType == 5)
             {
-                float value = BitConverter.ToSingle(data, currentIndex);
+                float value = BitConverter.ToSingle(data, (int)currentIndex);
                 currentIndex += 4;
 
                 if (fieldNum == 7)
@@ -896,21 +898,21 @@ public class ServerClass
     public List<FlattenedPropertyEntry> flattenedProperties = new List<FlattenedPropertyEntry>();
     public ServerClass[] baseClasses;
 
-    public static ServerClass Parse(byte[] data, int startIndex, out int bytesRead)
+    public static ServerClass Parse(byte[] data, uint startIndex, out uint bytesRead)
     {
         ServerClass serverClass = new ServerClass();
 
         int stringBytes;
 
         bytesRead = 0;
-        serverClass.classID = BitConverter.ToUInt16(data, startIndex);
+        serverClass.classID = BitConverter.ToUInt16(data, (int)startIndex);
         bytesRead += 2;
-        serverClass.name = DataParser.ReadDataTableString(data, startIndex + bytesRead, out stringBytes);
-        bytesRead += stringBytes; stringBytes = 0;
-        serverClass.dataTableName = DataParser.ReadDataTableString(data, startIndex + bytesRead, out stringBytes);
-        bytesRead += stringBytes; stringBytes = 0;
+        serverClass.name = DataParser.ReadDataTableString(data, (int)(startIndex + bytesRead), out stringBytes);
+        bytesRead += (uint)stringBytes; stringBytes = 0;
+        serverClass.dataTableName = DataParser.ReadDataTableString(data, (int)(startIndex + bytesRead), out stringBytes);
+        bytesRead += (uint)stringBytes; stringBytes = 0;
 
-        Debug.Log("ServerClass\n\nName: " + serverClass.name + " DataTableName: " + serverClass.dataTableName);
+        //Debug.Log("ServerClass\n\nName: " + serverClass.name + " DataTableName: " + serverClass.dataTableName);
         return serverClass;
     }
 }
@@ -941,16 +943,252 @@ public class FlattenedPropertyEntry
     }
 }
 
+public class PlayerInfo
+{
+    public long version;
+    public long xuid;
+    public string name;
+    public int userID;
+    public string guid;
+    public int friendsID;
+    public string friendsName;
+    public bool isFakePlayer;
+    public bool isHLTV;
+
+    public int customFiles0;
+    public int customFiles1;
+    public int customFiles2;
+    public int customFiles3;
+
+    byte filesDownloaded;
+
+    public static PlayerInfo Parse(byte[] data)
+    {
+        PlayerInfo playerInfo = new PlayerInfo();
+
+        uint byteIndex = 0;
+
+        DataParser.bigEndian = true;
+        playerInfo.version = DataParser.ReadLong(data, byteIndex * 8); byteIndex += 8;
+        playerInfo.xuid = DataParser.ReadLong(data, byteIndex * 8); byteIndex += 8;
+        DataParser.bigEndian = false;
+        playerInfo.name = DataParser.ReadCString(data, byteIndex, 128); byteIndex += 128;
+        DataParser.bigEndian = true;
+        playerInfo.userID = DataParser.ReadInt(data, byteIndex * 8); byteIndex += 4;
+        DataParser.bigEndian = false;
+        playerInfo.guid = DataParser.ReadCString(data, byteIndex, 33); byteIndex += 33;
+        DataParser.bigEndian = true;
+        playerInfo.friendsID = DataParser.ReadInt(data, byteIndex * 8); byteIndex += 4;
+        DataParser.bigEndian = false;
+        playerInfo.friendsName = DataParser.ReadCString(data, byteIndex, 128); byteIndex += 128;
+
+        playerInfo.isFakePlayer = DataParser.ReadBool(data, byteIndex * 8); byteIndex += 1;
+        playerInfo.isHLTV = DataParser.ReadBool(data, byteIndex * 8); byteIndex += 1;
+
+        playerInfo.customFiles0 = DataParser.ReadInt(data, byteIndex * 8); byteIndex += 4;
+        playerInfo.customFiles1 = DataParser.ReadInt(data, byteIndex * 8); byteIndex += 4;
+        playerInfo.customFiles2 = DataParser.ReadInt(data, byteIndex * 8); byteIndex += 4;
+        playerInfo.customFiles3 = DataParser.ReadInt(data, byteIndex * 8); byteIndex += 4;
+
+        playerInfo.filesDownloaded = DataParser.ReadByte(data, byteIndex * 8); byteIndex += 1;
+
+        return playerInfo;
+    }
+}
+public class StringTable
+{
+    public Tick tick;
+    public string name;
+    public int maxEntries;
+    public int numEntries;
+    public bool userDataFixedSize;
+    public int userDataSize;
+    public int userDataSizeBits;
+    public int flags;
+
+    public static StringTable Parse(byte[] data, Tick tick)
+    {
+        StringTable stringTable = new StringTable();
+        stringTable.tick = tick;
+
+        uint byteIndex = 0;
+        uint bytesRead;
+
+        while(byteIndex < data.Length)
+        {
+            int desc = DataParser.ReadProtoInt(data, byteIndex, out bytesRead);
+            byteIndex += bytesRead;
+            int wireType = desc & 7;
+            int fieldNum = desc >> 3;
+
+            if(wireType == 2)
+            {
+                if(fieldNum == 1)
+                {
+                    stringTable.name = DataParser.ReadProtoString(data, byteIndex, out bytesRead);
+                    byteIndex += bytesRead;
+                    continue;
+                }
+                else if(fieldNum == 8)
+                {
+                    uint dataLength = (uint)DataParser.ReadProtoInt(data, byteIndex, out bytesRead);
+                    byteIndex += bytesRead;
+
+                    stringTable.ReadEntries(DataParser.ReadBytes(data, byteIndex, dataLength));
+                    byteIndex += dataLength;
+
+                    break;
+                }
+            }
+
+            if (wireType != 0)
+                throw new Exception("StringTable: WireType must be 0");
+
+            int value = DataParser.ReadProtoInt(data, byteIndex, out bytesRead);
+            byteIndex += bytesRead;
+
+            if (fieldNum == 2) stringTable.maxEntries = value;
+            else if (fieldNum == 3) stringTable.numEntries = value;
+            else if (fieldNum == 4) stringTable.userDataFixedSize = value != 0;
+            else if (fieldNum == 5) stringTable.userDataSize = value;
+            else if (fieldNum == 6) stringTable.userDataSizeBits = value;
+            else if (fieldNum == 7) stringTable.flags = value;
+        }
+
+        return stringTable;
+    }
+
+    private void ReadEntries(byte[] data)
+    {
+        uint bitIndex = 0;
+
+        if(name == "modelprecache")
+            while(tick.demo.modelPrecache.Count < maxEntries)
+                tick.demo.modelPrecache.Add(null);
+
+        bool tempBool = DataParser.ReadBit(data, bitIndex);
+        bitIndex += 1;
+        if (tempBool)
+            throw new Exception("StringTable: Unable to decode dictionaries");
+
+        int nTemp = maxEntries;
+        byte nEntryBits = 0;
+        while ((nTemp >>= 1) != 0)
+            ++nEntryBits;
+
+        List<string> history = new List<string>();
+
+        int lastEntry = -1;
+
+        for(int i = 0; i < numEntries; i++)
+        {
+            int entryIndex = lastEntry + 1;
+
+            tempBool = DataParser.ReadBit(data, bitIndex);
+            bitIndex += 1;
+            if (!tempBool)
+            {
+                entryIndex = DataParser.ReadInt(data, bitIndex, nEntryBits);
+                bitIndex += nEntryBits;
+                //if (DemoParser.prints < 9) Debug.Log("EntryIndex: " + entryIndex);
+            }
+
+            lastEntry = entryIndex;
+
+            string entry = "";
+            if (entryIndex < 0 || entryIndex >= maxEntries)
+                throw new Exception("StringTable: Index out of bounds");
+
+            tempBool = DataParser.ReadBit(data, bitIndex);
+            bitIndex += 1;
+            if (tempBool)
+            {
+                bool substringCheck = DataParser.ReadBit(data, bitIndex);
+                bitIndex += 1;
+                //if (DemoParser.prints < 9) Debug.Log("SubstringCheck: " + substringCheck);
+
+                if(substringCheck)
+                {
+                    int index = DataParser.ReadInt(data, bitIndex, 5);
+                    bitIndex += 5;
+                    //if (DemoParser.prints < 9) Debug.Log("Index: " + index);
+                    int bytesToCopy = DataParser.ReadInt(data, bitIndex, 5);
+                    bitIndex += 5;
+                    //if (DemoParser.prints < 9) Debug.Log("BytesToCopy: " + bytesToCopy);
+
+                    //Debug.Log("History[" + index + "]: " + history[index]);
+                    entry = history[index].Substring(0, bytesToCopy);
+                }
+
+                uint bitsRead;
+                string limitedString = DataParser.ReadLimitedString(data, bitIndex, out bitsRead, 1024);
+                bitIndex += bitsRead;
+
+                if (limitedString != null) entry += limitedString;
+                //Debug.Log("Entry: " + entry);
+            }
+
+            if (history.Count > 31) history.RemoveAt(0);
+
+            history.Add(entry);
+
+            byte[] userData = new byte[0];
+            tempBool = DataParser.ReadBit(data, bitIndex);
+            bitIndex += 1;
+            if (tempBool)
+            {
+                if(userDataFixedSize)
+                {
+                    //Debug.Log("UserDataFixedSize");
+                    userData = DataParser.ReadBits(data, bitIndex, (uint)userDataSizeBits);
+                    bitIndex += (uint)userDataSizeBits;
+                }
+                else
+                {
+                    //Debug.Log("!UserDataFixedSize");
+                    int bytesToRead = DataParser.ReadInt(data, bitIndex, 14);
+                    bitIndex += 14;
+
+                    #region BlazingBlace
+                    //BytesToRead: 175 58 123 5091 1607 141 75 175 35
+                    #endregion
+                    Debug.Log("BitIndex: " + bitIndex + " BytesToRead: " + bytesToRead + " Data.Length: " + data.Length);
+                    userData = DataParser.ReadBits(data, bitIndex, (uint)(bytesToRead * 8));
+                    //userData = DataParser.ReadBytes(data, bitIndex / 8, (uint)bytesToRead);
+                    bitIndex += (uint)(bytesToRead * 8);
+                }
+            }
+
+            if (userData.Length == 0) break;
+
+            if(name == "userinfo")
+            {
+                //Debug.Log("UserInfo");
+                PlayerInfo playerInfo = PlayerInfo.Parse(userData);
+
+                tick.demo.playerInfo[entryIndex] = playerInfo;
+            }
+            else if(name == "instancebaseline")
+            {
+                int classID = int.Parse(entry);
+                Debug.Log("Instancebaseline " + classID);
+                tick.demo.instanceBaselines[classID] = userData;
+            }
+            else if(name == "modelprecache")
+            {
+                //Debug.Log("ModelPrecache");
+                tick.demo.modelPrecache[entryIndex] = entry;
+            }
+        }
+    }
+}
+
 public class PacketEntities
 {
     public int maxEntries;
     public int updatedEntries;
     public bool isDelta;
     public bool updateBaseLine;
-    //private int _IsDelta;
-    //public bool IsDelta { get { return _IsDelta != 0; } }
-    //private int _UpdateBaseline;
-    //public bool UpdateBaseline { get { return _UpdateBaseline != 0; } }
     public int baseline;
     public int deltaFrom;
 
@@ -963,38 +1201,58 @@ public class PacketEntities
 
     public static PacketEntities Parse(byte[] data, Tick tick)
     {
+        #region Blazing Blace
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 301 desc 24 IsDelta 0 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 58 len 11055
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 31 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1506 desc 58 len 510
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 23 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1508 desc 58 len 466
+
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 26 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1510 desc 58 len 486
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 30 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1512 desc 58 len 579
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 24 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1514 desc 58 len 440
+        
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 25 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1516 desc 58 len 449
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 30 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1518 desc 58 len 469
+        //desc 8 MaxEntries 533 desc 16 UpdatedEntries 23 desc 24 IsDelta 1 desc 32 UpdateBaseline 0 desc 40 Baseline 0 desc 48 DeltaFrom 1520 desc 58 len 437
+        #endregion
+
         PacketEntities packetEntities = new PacketEntities(tick);
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead;
 
+        string debugValues = "";
         while(currentIndex < data.Length)
         {
             int desc = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
-            currentIndex += bytesRead; bytesRead = 0;
+            currentIndex += bytesRead;
+            debugValues += "desc " + desc + "\n";
             int wireType = desc & 7;
             int fieldNum = desc >> 3;
 
             if (fieldNum == 7 && wireType == 2)
             {
-                int dataLength = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
-                currentIndex += bytesRead; bytesRead = 0;
+                uint dataLength = (uint)DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
+                currentIndex += bytesRead;
+                debugValues += "len " + dataLength;
+
+                if (DemoParser.prints < 9) { Debug.Log(debugValues); DemoParser.prints++; }
                 packetEntities.RetrieveEntityData(DataParser.ReadBytes(data, currentIndex, dataLength));
                 currentIndex += dataLength;
+                break;
             }
 
             if (wireType != 0)
-            {
-                int value = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
-                currentIndex += bytesRead; bytesRead = 0;
+                throw new Exception("PacketEntities: WireType should be 0");
 
-                if (fieldNum == 1) packetEntities.maxEntries = value;
-                else if (fieldNum == 2) packetEntities.updatedEntries = value;
-                else if (fieldNum == 3) packetEntities.isDelta = value != 0;
-                else if (fieldNum == 4) packetEntities.updateBaseLine = value != 0;
-                else if (fieldNum == 5) packetEntities.baseline = value;
-                else if (fieldNum == 6) packetEntities.deltaFrom = value;
-            }
+            int value = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
+            currentIndex += bytesRead;
+
+            if (fieldNum == 1) { packetEntities.maxEntries = value; debugValues += "MaxEntries " + value + "\n"; }
+            else if (fieldNum == 2) { packetEntities.updatedEntries = value; debugValues += "UpdatedEntries " + value + "\n"; }
+            else if (fieldNum == 3) { packetEntities.isDelta = value != 0; debugValues += "IsDelta " + value + "\n"; }
+            else if (fieldNum == 4) { packetEntities.updateBaseLine = value != 0; debugValues += "UpdateBaseline " + value + "\n"; }
+            else if (fieldNum == 5) { packetEntities.baseline = value; debugValues += "Baseline " + value + "\n"; }
+            else if (fieldNum == 6) { packetEntities.deltaFrom = value; debugValues += "DeltaFrom " + value + "\n"; }
         }
 
         return packetEntities;
@@ -1002,35 +1260,710 @@ public class PacketEntities
 
     private void RetrieveEntityData(byte[] data)
     {
-        int currentBitIndex = 0;
-        int bitsRead = 0;
-        int currentEntity = -1;
+        uint bitIndex = 0;
+        uint bitsRead;
+        int entityIndex = -1;
 
         for(int i = 0; i < updatedEntries; i++)
         {
-            currentEntity += 1 + (int)DataParser.ReadUBitInt(data, currentBitIndex, out bitsRead);
-            currentBitIndex += bitsRead; bitsRead = 0;
+            entityIndex += 1 + (int)DataParser.ReadUBitInt(data, bitIndex, out bitsRead);
+            bitIndex += bitsRead;
 
-            bool currentFlag = DataParser.ReadBit(data, currentBitIndex);
-            currentBitIndex += 1;
+            bool currentFlag = DataParser.ReadBit(data, bitIndex);
+            bitIndex += 1;
             if(!currentFlag)
             {
-                currentFlag = DataParser.ReadBit(data, currentBitIndex);
-                currentBitIndex += 1;
-                if(currentFlag)
+                currentFlag = DataParser.ReadBit(data, bitIndex);
+                bitIndex += 1;
+                if(currentFlag) //Create Entity
                 {
-                    //Create Entity
+                    if (DemoParser.prints < 9) Debug.Log("Creating Entity #" + entityIndex);
+
+                    #region PVS
+                    int serverClassID = DataParser.ReadInt(data, bitIndex, (byte)tick.demo.dataTables.ClassBits);
+                    bitIndex += (uint)tick.demo.dataTables.ClassBits;
+                    if (DemoParser.prints < 9) Debug.Log("ServerClassID: " + serverClassID);
+
+                    ServerClass classOfEntity = tick.demo.dataTables.serverClasses[serverClassID];
+
+                    //DataParser.ReadBits(data, currentBitIndex, 10);
+                    bitIndex += 10;
+
+                    Entity createdEntity = new Entity(entityIndex, classOfEntity);
+
+                    object[] fastBaseline;
+                    if (tick.demo.preprocessedBaselines.TryGetValue(serverClassID, out fastBaseline))
+                    {
+                        Debug.Log("Emitting");
+                        Entity.PropertyEntry.Emit(createdEntity, fastBaseline);
+                    }
+                    else
+                    {
+                        Debug.Log("Not Emitting");
+                        List<object> preprocessedBaseline = new List<object>();
+                        if (tick.demo.instanceBaselines.ContainsKey(serverClassID))
+                        {
+                            using (PropertyCollector collector = new PropertyCollector(createdEntity, preprocessedBaseline))
+                            {
+                                Debug.Log("Applying Update");
+                                byte[] instanceBaseline = tick.demo.instanceBaselines[serverClassID];
+                                createdEntity.Update(instanceBaseline, 0, out bitsRead);
+                            }
+                        }
+                        tick.demo.preprocessedBaselines.Add(serverClassID, preprocessedBaseline.ToArray());
+                    }
+                    #region Blazing Blace
+                    //ServerClassID: 236  Not Emitting  Applying Update
+                    //ServerClassID: 34  Not Emitting  Applying Update
+                    //ServerClassID: 34  Emitting
+                    //ServerClassID: 34  Emitting
+                    //ServerClassID: 34  Emitting
+                    //ServerClassID: 37  Not Emitting  Applying Update
+                    //ServerClassID: 37  Emitting
+                    #endregion
+                    #endregion
+
+                    tick.demo.entities[entityIndex] = createdEntity;
+
+                    createdEntity.Update(data, bitIndex, out bitsRead);
+                    bitIndex += bitsRead;
+                }
+                else //Update Entity
+                {
+                    if (DemoParser.prints < 9) Debug.Log("Updating Entity #" + entityIndex);
+
+                    Entity entity = tick.demo.entities[entityIndex];
+                    entity.Update(data, bitIndex, out bitsRead);
+                    bitIndex += bitsRead;
+                }
+            }
+            else //Destroy Entity
+            {
+                if (DemoParser.prints < 9) Debug.Log("Destroying Entity #" + entityIndex);
+                bitIndex += 1;
+            }
+        }
+    }
+
+    private class PropertyCollector : IDisposable
+    {
+        private readonly Entity underlying;
+        private readonly IList<object> capture;
+
+        public PropertyCollector(Entity underlying, IList<object> capture)
+        {
+            this.underlying = underlying;
+            this.capture = capture;
+
+            foreach(Entity.PropertyEntry property in this.underlying.properties)
+            {
+                if (property.entry.property.type == SendTableProperty.SendPropertyType.Array)
+                    property.ArrayReceived += HandleArrayReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.Float)
+                    property.FloatReceived += HandleFloatReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.Int)
+                    property.IntReceived += HandleIntReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.String)
+                    property.StringReceived += HandleStringReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.Vector || property.entry.property.type == SendTableProperty.SendPropertyType.VectorXY)
+                    property.VectorReceived += HandleVectorReceived;
+                else throw new Exception("Cannot handle unknown type");
+            }
+        }
+
+        private void HandleVectorReceived(object sender, Entity.PropertyEntry.PropertyUpdateEventArgs<Vector3> eventArgs) { capture.Add(eventArgs.Record()); }
+        private void HandleStringReceived(object sender, Entity.PropertyEntry.PropertyUpdateEventArgs<string> eventArgs) { capture.Add(eventArgs.Record()); }
+        private void HandleIntReceived(object sender, Entity.PropertyEntry.PropertyUpdateEventArgs<int> eventArgs) { capture.Add(eventArgs.Record()); }
+        private void HandleFloatReceived(object sender, Entity.PropertyEntry.PropertyUpdateEventArgs<float> eventArgs) { capture.Add(eventArgs.Record()); }
+        private void HandleArrayReceived(object sender, Entity.PropertyEntry.PropertyUpdateEventArgs<object[]> eventArgs) { capture.Add(eventArgs.Record()); }
+
+        public void Dispose()
+        {
+            foreach(Entity.PropertyEntry property in underlying.properties)
+            {
+                if (property.entry.property.type == SendTableProperty.SendPropertyType.Array)
+                    property.ArrayReceived -= HandleArrayReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.Float)
+                    property.FloatReceived -= HandleFloatReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.Int)
+                    property.IntReceived -= HandleIntReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.String)
+                    property.StringReceived -= HandleStringReceived;
+                else if (property.entry.property.type == SendTableProperty.SendPropertyType.Vector || property.entry.property.type == SendTableProperty.SendPropertyType.VectorXY)
+                    property.VectorReceived -= HandleVectorReceived;
+                else throw new Exception("Cannot handle unknown type");
+            }
+        }
+    }
+}
+public class PropertyDecoder
+{
+    public static object DecodeProperty(FlattenedPropertyEntry property, byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        SendTableProperty sendTableProperty = property.property;
+        if (sendTableProperty.type == SendTableProperty.SendPropertyType.Int) return DecodeInt(sendTableProperty, data, bitIndex, out bitsRead);
+        else if (sendTableProperty.type == SendTableProperty.SendPropertyType.Float) return DecodeFloat(sendTableProperty, data, bitIndex, out bitsRead);
+        else if (sendTableProperty.type == SendTableProperty.SendPropertyType.Vector) return DecodeVector(sendTableProperty, data, bitIndex, out bitsRead);
+        else if (sendTableProperty.type == SendTableProperty.SendPropertyType.Array) return DecodeArray(property, data, bitIndex, out bitsRead);
+        else if (sendTableProperty.type == SendTableProperty.SendPropertyType.String) return DecodeString(sendTableProperty, data, bitIndex, out bitsRead);
+        else if (sendTableProperty.type == SendTableProperty.SendPropertyType.VectorXY) return DecodeVectorXY(sendTableProperty, data, bitIndex, out bitsRead);
+        else throw new Exception("Cannot decode: Unknown type");
+    }
+
+    public static int DecodeInt(SendTableProperty property, byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        if ((property.flags & SendTableProperty.SendPropertyFlag.VarInt) != 0)
+        {
+            Debug.Log("VarInteger");
+            //if ((property.flags & SendTableProperty.SendPropertyFlag.Unsigned) != 0)
+                return (int)DataParser.ReadVarInt32(data, bitIndex, out bitsRead);
+        }
+        else
+        {
+            Debug.Log("Integer");
+            bitsRead = (uint)property.numberOfBits;
+            //if ((property.flags & SendTableProperty.SendPropertyFlag.Unsigned) != 0)
+                return DataParser.ReadInt(data, bitIndex, (byte)property.numberOfBits);
+        }
+    }
+    public static float DecodeFloat(SendTableProperty property, byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        Debug.Log("Float");
+        float resultValue = 0f;
+        ulong dwInterp;
+
+        if (DecodeSpecialFloat(property, data, bitIndex, out bitsRead, out resultValue))
+            return resultValue;
+
+        bitsRead += (uint)property.numberOfBits;
+        dwInterp = DataParser.ReadUInt(data, bitIndex, (byte)property.numberOfBits);
+        resultValue = (float)dwInterp / ((1 << property.numberOfBits) - 1);
+        resultValue = property.lowValue + (property.highValue - property.lowValue) * resultValue;
+
+        return resultValue;
+    }
+    public static Vector3 DecodeVector(SendTableProperty property, byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        Debug.Log("Vector");
+        uint tempBitsRead = 0;
+        float x = DecodeFloat(property, data, bitIndex, out tempBitsRead);
+        bitsRead = tempBitsRead;
+        float y = DecodeFloat(property, data, bitIndex + bitsRead, out tempBitsRead);
+        bitsRead += tempBitsRead;
+        float z = 0;
+
+        if ((property.flags & SendTableProperty.SendPropertyFlag.Normal) == 0)
+        {
+            z = DecodeFloat(property, data, bitIndex + bitsRead, out tempBitsRead);
+            bitsRead += tempBitsRead;
+        }
+        else
+        {
+            bool isNegative = DataParser.ReadBit(data, bitIndex + bitsRead);
+            bitsRead += 1;
+
+            float absolute = x * x + y * y;
+            if (absolute < 1)
+                z = Mathf.Sqrt(1 - absolute);
+
+            if (isNegative)
+                z *= -1;
+        }
+
+        return new Vector3(x, y, z);
+    }
+    public static object[] DecodeArray(FlattenedPropertyEntry flattenedProperty, byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        Debug.Log("Array");
+        int maxElements = flattenedProperty.property.numberOfElements;
+
+        byte numBits = 1;
+
+        while ((maxElements >>= 1) != 0)
+            numBits++;
+
+        int numElements = DataParser.ReadInt(data, bitIndex, numBits);
+        bitsRead = numBits;
+
+        object[] result = new object[numElements];
+
+        FlattenedPropertyEntry temp = new FlattenedPropertyEntry("", flattenedProperty.property, null);
+        for (int i = 0; i < numElements; i++)
+        {
+            uint tempBitsRead;
+            result[i] = DecodeProperty(temp, data, bitIndex + bitsRead, out tempBitsRead);
+            bitsRead += tempBitsRead;
+        }
+
+        return result;
+    }
+    public static string DecodeString(SendTableProperty property, byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        Debug.Log("String");
+        int stringByteSize = DataParser.ReadInt(data, bitIndex, 9);
+        bitsRead = 9 + (uint)(stringByteSize * 8);
+        return System.Text.Encoding.Default.GetString(DataParser.ReadBits(data, bitIndex + 9, (uint)(stringByteSize * 8)));
+    }
+    public static Vector3 DecodeVectorXY(SendTableProperty property, byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        Debug.Log("VectorXY");
+        uint tempBitsRead;
+        float x = DecodeFloat(property, data, bitIndex, out tempBitsRead);
+        bitsRead = tempBitsRead;
+        float y = DecodeFloat(property, data, bitIndex, out tempBitsRead);
+        bitsRead += tempBitsRead;
+
+        return new Vector3(x, y);
+    }
+
+    #region Special Float Stuff
+    private static bool DecodeSpecialFloat(SendTableProperty property, byte[] data, uint bitIndex, out uint bitsRead, out float result)
+    {
+        if ((property.flags & SendTableProperty.SendPropertyFlag.Coord) != 0)
+        {
+            result = ReadBitCoord(data, bitIndex, out bitsRead);
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.CoordMp) != 0)
+        {
+            result = ReadBitCoordMP(data, bitIndex, out bitsRead, false, false);
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.CoordMpLowPrecision) != 0)
+        {
+            result = ReadBitCoordMP(data, bitIndex, out bitsRead, false, true);
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.CoordMpIntegral) != 0)
+        {
+            result = ReadBitCoordMP(data, bitIndex, out bitsRead, true, false);
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.NoScale) != 0)
+        {
+            result = DataParser.ReadFloat(data, bitIndex);
+            bitsRead = 32;
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.Normal) != 0)
+        {
+            result = ReadBitNormal(data, bitIndex, out bitsRead);
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.CellCoord) != 0)
+        {
+            result = ReadBitCellCoord(data, bitIndex, out bitsRead, (byte)property.numberOfBits, false, false);
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.CellCoordLowPrecision) != 0)
+        {
+            result = ReadBitCellCoord(data, bitIndex, out bitsRead, (byte)property.numberOfBits, true, false);
+            return true;
+        }
+        else if ((property.flags & SendTableProperty.SendPropertyFlag.CellCoordIntegral) != 0)
+        {
+            result = ReadBitCellCoord(data, bitIndex, out bitsRead, (byte)property.numberOfBits, false, true);
+            return true;
+        }
+
+        bitsRead = 0;
+        result = 0;
+        return false;
+    }
+
+    static readonly byte COORD_FRACTIONAL_BITS = 5;
+    static readonly byte COORD_DENOMINATOR = (byte)(1 << (COORD_FRACTIONAL_BITS));
+    static readonly float COORD_RESOLUTION = (1.0f / (COORD_DENOMINATOR));
+
+    static readonly byte COORD_FRACTIONAL_BITS_MP_LOWPRECISION = 3;
+    static readonly float COORD_DENOMINATOR_LOWPRECISION = (1 << (COORD_FRACTIONAL_BITS_MP_LOWPRECISION));
+    static readonly float COORD_RESOLUTION_LOWPRECISION = (1.0f / (COORD_DENOMINATOR_LOWPRECISION));
+
+    private static float ReadBitCoord(byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        int intVal, fractVal;
+        float value = 0;
+
+        bool isNegative = false;
+
+        intVal = DataParser.ReadInt(data, bitIndex, 1);
+        bitsRead = 1;
+        fractVal = DataParser.ReadInt(data, bitIndex + bitsRead, 1);
+        bitsRead += 1;
+
+        if ((intVal | fractVal) != 0)
+        {
+            isNegative = DataParser.ReadBit(data, bitIndex + bitsRead);
+            bitsRead += 1;
+
+            if (intVal == 1)
+            {
+                intVal = DataParser.ReadInt(data, bitIndex + bitsRead, 14) + 1;
+                bitsRead += 14;
+            }
+
+            if (fractVal == 1)
+            {
+                fractVal = DataParser.ReadInt(data, bitIndex + bitsRead, COORD_FRACTIONAL_BITS);
+                bitsRead += COORD_FRACTIONAL_BITS;
+            }
+
+            value = intVal + (fractVal + COORD_RESOLUTION);
+        }
+
+        if (isNegative)
+            value *= -1;
+
+        return value;
+    }
+    private static float ReadBitCoordMP(byte[] data, uint bitIndex, out uint bitsRead, bool isIntegral, bool isLowPrecision)
+    {
+        int intVal = 0, fractVal = 0;
+        float value = 0;
+        bool isNegative = false;
+
+        bool inBounds = DataParser.ReadBit(data, bitIndex);
+        bitsRead = 1;
+
+        if(isIntegral)
+        {
+            intVal = DataParser.ReadBit(data, bitIndex + bitsRead) ? 1 : 0;
+            bitsRead += 1;
+
+            if(intVal == 1)
+            {
+                isNegative = DataParser.ReadBit(data, bitIndex + bitsRead);
+                bitsRead += 1;
+
+                if(inBounds)
+                {
+                    value = DataParser.ReadInt(data, bitIndex + bitsRead, 11) + 1;
+                    bitsRead += 11;
                 }
                 else
                 {
-                    //Update Entity
+                    value = DataParser.ReadInt(data, bitIndex + bitsRead, 14) + 1;
+                    bitsRead += 14;
                 }
             }
-            else
+        }
+        else
+        {
+            intVal = DataParser.ReadBit(data, bitIndex + bitsRead) ? 1 : 0;
+            bitsRead += 1;
+
+            isNegative = DataParser.ReadBit(data, bitIndex + bitsRead);
+            bitsRead += 1;
+
+            if(intVal == 1)
             {
-                //Destroy Entity
+                if(inBounds)
+                {
+                    value = DataParser.ReadInt(data, bitIndex + bitsRead, 11) + 1;
+                    bitsRead += 11;
+                }
+                else
+                {
+                    value = DataParser.ReadInt(data, bitIndex + bitsRead, 14) + 1;
+                    bitsRead += 14;
+                }
+            }
+
+            byte fractBitSize = (byte)(isLowPrecision ? 3 : 5);
+            fractVal = DataParser.ReadInt(data, bitIndex + bitsRead, fractBitSize);
+            bitsRead += fractBitSize;
+
+            value = intVal + (fractVal * (isLowPrecision ? COORD_RESOLUTION_LOWPRECISION : COORD_RESOLUTION));
+        }
+
+        if (isNegative)
+            value *= -1;
+
+        return value;
+    }
+    private static float ReadBitCellCoord(byte[] data, uint bitIndex, out uint bitsRead, byte bits, bool lowPrecision, bool integral)
+    {
+        int intVal = 0, fractVal = 0;
+        float value = 0;
+
+        if(integral)
+        {
+            value = DataParser.ReadInt(data, bitIndex, bits);
+            bitsRead = bits;
+        }
+        else
+        {
+            intVal = DataParser.ReadInt(data, bitIndex, bits);
+            bitsRead = bits;
+            byte fractBitSize = lowPrecision ? COORD_FRACTIONAL_BITS_MP_LOWPRECISION : COORD_FRACTIONAL_BITS;
+            fractVal = DataParser.ReadInt(data, bitIndex + bitsRead, fractBitSize);
+            bitsRead += fractBitSize;
+
+            value = intVal + (fractVal * (lowPrecision ? COORD_RESOLUTION_LOWPRECISION : COORD_RESOLUTION));
+        }
+
+        return value;
+    }
+
+    static readonly byte NORMAL_FRACTIONAL_BITS = 11;
+    static readonly uint NORMAL_DENOMINATOR = (uint)((1 << (NORMAL_FRACTIONAL_BITS)) - 1);
+    static readonly float NORMAL_RESOLUTION = (1.0f / (NORMAL_DENOMINATOR));
+
+    private static float ReadBitNormal(byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        bool isNegative = DataParser.ReadBit(data, bitIndex);
+        bitsRead = 1;
+
+        uint fractVal = DataParser.ReadUInt(data, bitIndex, NORMAL_FRACTIONAL_BITS);
+        bitsRead += NORMAL_FRACTIONAL_BITS;
+
+        float value = fractVal * NORMAL_RESOLUTION;
+
+        if (isNegative)
+            value *= -1;
+
+        return value;
+    }
+    #endregion
+}
+public class Entity
+{
+    public int id;
+    public ServerClass serverClass;
+    public PropertyEntry[] properties;
+
+    public Entity(int id, ServerClass serverClass)
+    {
+        this.id = id;
+        this.serverClass = serverClass;
+
+        properties = new PropertyEntry[serverClass.flattenedProperties.Count];
+        for (int i = 0; i < properties.Length; i++)
+            properties[i] = new PropertyEntry(serverClass.flattenedProperties[i], (uint)i);
+    }
+
+    public PropertyEntry FindProperty(string name)
+    {
+        return properties.Single(item => item.entry.propertyName == name);
+    }
+
+    public void Update(byte[] data, uint bitIndex, out uint bitsRead)
+    {
+        bool newWay = DataParser.ReadBit(data, bitIndex);
+        bitsRead = 1;
+        int index = -1;
+        List<PropertyEntry> entries = new List<PropertyEntry>();
+
+        uint tempBitsRead;
+        while((index = ReadFieldIndex(data, bitIndex + bitsRead, out tempBitsRead, index, newWay)) != -1)
+        {
+            #region Blazing Blace
+            if (DemoParser.prints < 9) Debug.Log("Index: " + index); //0 1 2...57  0 1 2...1019  0 1 2 3 7 8 17 18 19 301 541 597 611 615 616
+            #endregion
+            bitsRead += tempBitsRead;
+            entries.Add(properties[index]);
+        }
+
+        foreach(PropertyEntry property in entries)
+        {
+            property.Decode(data, bitIndex + bitsRead, out tempBitsRead, this);
+            bitsRead += tempBitsRead;
+        }
+    }
+
+    private int ReadFieldIndex(byte[] data, uint bitIndex, out uint bitsRead, int lastIndex, bool bNewWay)
+    {
+        bitsRead = 0;
+        bool tempBool;
+        if(bNewWay)
+        {
+            tempBool = DataParser.ReadBit(data, bitIndex);
+            bitsRead += 1;
+            if (tempBool)
+            {
+                return lastIndex + 1;
             }
         }
+
+        int ret = 0;
+        tempBool = DataParser.ReadBit(data, bitIndex + bitsRead);
+        bitsRead += 1;
+        if (bNewWay && tempBool)
+        {
+            ret = DataParser.ReadInt(data, bitIndex + bitsRead, 3);
+            bitsRead += 3;
+        }
+        else
+        {
+            ret = DataParser.ReadInt(data, bitIndex + bitsRead, 7);
+            bitsRead += 7;
+
+            if((ret & (32 | 64)) == 32)
+            {
+                ret = (ret & ~96) | (DataParser.ReadInt(data, bitIndex + bitsRead, 2) << 5);
+                bitsRead += 2;
+            }
+            else if((ret & (32 | 64)) == 64)
+            {
+                ret = (ret & ~96) | (DataParser.ReadInt(data, bitIndex + bitsRead, 4) << 5);
+                bitsRead += 4;
+            }
+            else if ((ret & (32 | 64)) == 96)
+            {
+                ret = (ret & ~96) | (DataParser.ReadInt(data, bitIndex + bitsRead, 7) << 5);
+                bitsRead += 7;
+            }
+        }
+
+        if (ret == 0xfff)
+            return -1;
+
+        return lastIndex + 1 + ret;
+    }
+
+    public override string ToString()
+    {
+        return id + ": " + serverClass;
+    }
+
+    public class PropertyEntry
+    {
+        public readonly uint index;
+        public FlattenedPropertyEntry entry { get; private set; }
+
+        public PropertyEntry(FlattenedPropertyEntry property, uint index)
+        {
+            entry = new FlattenedPropertyEntry(property.propertyName, property.property, property.arrayElementProperty);
+            this.index = index;
+        }
+
+        public void Decode(byte[] data, uint bitIndex, out uint totalBitsRead, Entity entity)
+        {
+            totalBitsRead = 0;
+            if(entry.property.type == SendTableProperty.SendPropertyType.Int)
+            {
+                if (entry.property.type == SendTableProperty.SendPropertyType.Int)
+                {
+                    int value = PropertyDecoder.DecodeInt(entry.property, data, bitIndex, out totalBitsRead);
+                    if (IntReceived != null)
+                        IntReceived(this, new PropertyUpdateEventArgs<int>(value, entity, this));
+                }
+                else if (entry.property.type == SendTableProperty.SendPropertyType.Float)
+                {
+                    float value = PropertyDecoder.DecodeFloat(entry.property, data, bitIndex, out totalBitsRead);
+                    if (FloatReceived != null)
+                        FloatReceived(this, new PropertyUpdateEventArgs<float>(value, entity, this));
+                }
+                else if (entry.property.type == SendTableProperty.SendPropertyType.Vector)
+                {
+                    Vector3 value = PropertyDecoder.DecodeVector(entry.property, data, bitIndex, out totalBitsRead);
+                    if (VectorReceived != null)
+                        VectorReceived(this, new PropertyUpdateEventArgs<Vector3>(value, entity, this));
+                }
+                else if (entry.property.type == SendTableProperty.SendPropertyType.Array)
+                {
+                    object[] value = PropertyDecoder.DecodeArray(entry, data, bitIndex, out totalBitsRead);
+                    if (ArrayReceived != null)
+                        ArrayReceived(this, new PropertyUpdateEventArgs<object[]>(value, entity, this));
+                }
+                else if (entry.property.type == SendTableProperty.SendPropertyType.String)
+                {
+                    string value = PropertyDecoder.DecodeString(entry.property, data, bitIndex, out totalBitsRead);
+                    if (StringReceived != null)
+                        StringReceived(this, new PropertyUpdateEventArgs<string>(value, entity, this));
+                }
+                else if (entry.property.type == SendTableProperty.SendPropertyType.VectorXY)
+                {
+                    Vector3 value = PropertyDecoder.DecodeVectorXY(entry.property, data, bitIndex, out totalBitsRead);
+                    if (VectorReceived != null)
+                        VectorReceived(this, new PropertyUpdateEventArgs<Vector3>(value, entity, this));
+                }
+                else throw new Exception("Could not read property.");
+            }
+        }
+
+        public static void Emit(Entity entity, object[] captured)
+        {
+            foreach(object arg in captured)
+            {
+                RecordedPropertyUpdate<int> intReceived = arg as RecordedPropertyUpdate<int>;
+                RecordedPropertyUpdate<float> floatReceived = arg as RecordedPropertyUpdate<float>;
+                RecordedPropertyUpdate<Vector3> vectorReceived = arg as RecordedPropertyUpdate<Vector3>;
+                RecordedPropertyUpdate<string> stringReceived = arg as RecordedPropertyUpdate<string>;
+                RecordedPropertyUpdate<object[]> arrayReceived = arg as RecordedPropertyUpdate<object[]>;
+
+                if (intReceived != null)
+                {
+                    EventHandler<PropertyUpdateEventArgs<int>> eventHandler = entity.properties[intReceived.propertyIndex].IntReceived;
+                    if (eventHandler != null)
+                        eventHandler(null, new PropertyUpdateEventArgs<int>(intReceived.value, entity, entity.properties[intReceived.propertyIndex]));
+                }
+                else if (floatReceived != null)
+                {
+                    EventHandler<PropertyUpdateEventArgs<float>> eventHandler = entity.properties[floatReceived.propertyIndex].FloatReceived;
+                    if (eventHandler != null)
+                        eventHandler(null, new PropertyUpdateEventArgs<float>(floatReceived.value, entity, entity.properties[floatReceived.propertyIndex]));
+                }
+                else if (vectorReceived != null)
+                {
+                    EventHandler<PropertyUpdateEventArgs<Vector3>> eventHandler = entity.properties[vectorReceived.propertyIndex].VectorReceived;
+                    if (eventHandler != null)
+                        eventHandler(null, new PropertyUpdateEventArgs<Vector3>(vectorReceived.value, entity, entity.properties[vectorReceived.propertyIndex]));
+                }
+                else if (stringReceived != null)
+                {
+                    EventHandler<PropertyUpdateEventArgs<string>> eventHandler = entity.properties[stringReceived.propertyIndex].StringReceived;
+                    if (eventHandler != null)
+                        eventHandler(null, new PropertyUpdateEventArgs<string>(stringReceived.value, entity, entity.properties[stringReceived.propertyIndex]));
+                }
+                else if (arrayReceived != null)
+                {
+                    EventHandler<PropertyUpdateEventArgs<object[]>> eventHandler = entity.properties[arrayReceived.propertyIndex].ArrayReceived;
+                    if (eventHandler != null)
+                        eventHandler(null, new PropertyUpdateEventArgs<object[]>(arrayReceived.value, entity, entity.properties[arrayReceived.propertyIndex]));
+                }
+                else throw new Exception("Cannot emit unknown type");
+            }
+        }
+
+        #region Events
+        public event EventHandler<PropertyUpdateEventArgs<int>> IntReceived;
+        public event EventHandler<PropertyUpdateEventArgs<float>> FloatReceived;
+        public event EventHandler<PropertyUpdateEventArgs<Vector3>> VectorReceived;
+        public event EventHandler<PropertyUpdateEventArgs<string>> StringReceived;
+        public event EventHandler<PropertyUpdateEventArgs<object[]>> ArrayReceived;
+
+        public class PropertyUpdateEventArgs<T> : EventArgs
+        {
+            public T value { get; private set; }
+            public Entity entity { get; private set; }
+            public PropertyEntry property { get; private set; }
+            
+            public PropertyUpdateEventArgs(T value, Entity entity, PropertyEntry property)
+            {
+                this.value = value;
+                this.entity = entity;
+                this.property = property;
+            }
+
+            public RecordedPropertyUpdate<T> Record()
+            {
+                return new RecordedPropertyUpdate<T>(property.index, value);
+            }
+        }
+
+        public class RecordedPropertyUpdate<T>
+        {
+            public uint propertyIndex;
+            public T value;
+
+            public RecordedPropertyUpdate(uint propertyIndex, T value)
+            {
+                this.propertyIndex = propertyIndex;
+                this.value = value;
+            }
+        }
+        #endregion
     }
 }
 
@@ -1045,8 +1978,8 @@ public class EventDescriptor
         EventDescriptor descriptor = new EventDescriptor();
         List<EventKey> keys = new List<EventKey>();
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead = 0;
 
         while (currentIndex < data.Length)
         {
@@ -1067,7 +2000,7 @@ public class EventDescriptor
             }
             else if (wireType == 2 && fieldNum == 3)
             {
-                int keyLength = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
+                uint keyLength = (uint)DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
                 currentIndex += bytesRead; bytesRead = 0;
                 keys.Add(EventKey.Parse(DataParser.ReadBytes(data, currentIndex, keyLength)));
                 currentIndex += keyLength;
@@ -1088,8 +2021,8 @@ public class EventKey
     {
         EventKey key = new EventKey();
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead = 0;
 
         while(currentIndex < data.Length)
         {
@@ -1114,12 +2047,11 @@ public class EventKey
         return key;
     }
 
-    /*public override bool Equals(object obj)
-    {
-        return (obj is EventKey) ? (((EventKey)obj).type == type && ((EventKey)obj).name.Equals(name, StringComparison.InvariantCultureIgnoreCase)) : false;
-    }*/
+    //public override bool Equals(object obj)
+    //{
+    //    return (obj is EventKey) ? (((EventKey)obj).type == type && ((EventKey)obj).name.Equals(name, StringComparison.InvariantCultureIgnoreCase)) : false;
+    //}
 }
-
 public class GameEvent
 {
     public string eventName;
@@ -1131,8 +2063,8 @@ public class GameEvent
         GameEvent gameEvent = new GameEvent();
         List<object> keys = new List<object>();
 
-        int currentIndex = 0;
-        int bytesRead = 0;
+        uint currentIndex = 0;
+        uint bytesRead = 0;
 
         while (currentIndex < data.Length)
         {
@@ -1154,7 +2086,7 @@ public class GameEvent
             {
                 int keySize = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
                 currentIndex += bytesRead; bytesRead = 0;
-                int keyStartIndex = currentIndex;
+                uint keyStartIndex = currentIndex;
 
                 desc = DataParser.ReadProtoInt(data, currentIndex, out bytesRead);
                 currentIndex += bytesRead; bytesRead = 0;
@@ -1182,7 +2114,7 @@ public class GameEvent
                 else if (typeMember == 2) //float
                 {
                     if (wireType != 5) throw new Exception("GameEvent: TypeMember 2, WireType should be 5");
-                    keys.Add(BitConverter.ToSingle(data, currentIndex));
+                    keys.Add(BitConverter.ToSingle(data, (int)currentIndex));
                     currentIndex += 4;
                 }
                 else if (typeMember == 3 || typeMember == 4 || typeMember == 5) //long/short/byte

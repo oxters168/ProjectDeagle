@@ -193,7 +193,7 @@ public class VPKParser
                 #endregion
 
                 #region Read File Bytes
-                file = DataParser.ReadBytes(currentStream, (int)entry.EntryLength);
+                file = DataParser.ReadBytes(currentStream, entry.EntryLength);
                 #endregion
             }
         }

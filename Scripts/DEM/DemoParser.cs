@@ -11,15 +11,35 @@ public class DemoParser
     public DemoHeader demoHeader;
     Stream stream;
 
+    public static uint prints = 0;
+
     public string locationToParse;
     public int port;
     private Socket gotvSocket;
     private IPEndPoint gotvEndPoint;
 
+    const int MAX_EDICT_BITS = 11;
+    const int INDEX_MASK = ((1 << MAX_EDICT_BITS) - 1);
+    const int MAX_ENTITIES = (1 << MAX_EDICT_BITS);
+    const int MAX_PLAYERS = 64;
+    const int MAX_WEAPONS = 64;
+
+    public DataTables dataTables; //Holds the ServerClasses
+
     public Dictionary<ServerClass, EquipmentElement> equipmentMapping = new Dictionary<ServerClass, EquipmentElement>();
     public Dictionary<int, EventDescriptor> gameEventDescriptors;
 
     public Dictionary<EventDescriptor, Dictionary<string, object>> uniqueEvents = new Dictionary<EventDescriptor, Dictionary<string, object>>(); //Debug
+
+    public Entity[] entities = new Entity[MAX_ENTITIES];
+
+    public List<StringTable> stringTables = new List<StringTable>();
+
+    public PlayerInfo[] playerInfo = new PlayerInfo[MAX_PLAYERS];
+    public Dictionary<int, byte[]> instanceBaselines = new Dictionary<int, byte[]>();
+    public List<string> modelPrecache = new List<string>();
+
+    public Dictionary<int, object[]> preprocessedBaselines = new Dictionary<int, object[]>();
 
     public DemoParser(Stream stream)
     {
@@ -116,7 +136,7 @@ public class DemoParser
             DataParser.ReadInt(stream);
         }
 
-        tick.size = DataParser.ReadInt(stream); //sizeof
+        tick.size = (uint)DataParser.ReadInt(stream); //sizeof
         if (tick.size > 0) data = DataParser.ReadBytes(stream, tick.size);
 
         if (data != null) tick.ParseTickData(data);

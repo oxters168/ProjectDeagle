@@ -81,9 +81,10 @@ public class ProgramInterface : MonoBehaviour
         MakeMenus();
 
         #region Testing Region
+        //Debug.Log(DataParser.ReadBits(new byte[] { 164, 1 }, 4, 12)[0]);
         //Debug.Log("Middle: " + BitConverter.ToUInt16(DataParser.ReadBits(new byte[] { 128, 2, 60 }, 6, 16), 0)); //61450
-        //ParseDEM("C:/Users/oxter/OneDrive/Replays/BlazingBlace.dem");
-        ParseDEM("C:/Program Files (x86)/Steam/steamapps/common/Counter-Strike Global Offensive/csgo/replays/match730_003134331647877447733_1083018565_191.dem");
+        ParseDEM("C:/Users/oxter/OneDrive/Replays/BlazingBlace.dem");
+        //ParseDEM("C:/Program Files (x86)/Steam/steamapps/common/Counter-Strike Global Offensive/csgo/replays/match730_003134331647877447733_1083018565_191.dem");
         //ParseVPK(Environment.GetEnvironmentVariable("PROGRAMFILES(X86)").Replace("\\", "/") + "/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk");
         //Demo.ConvertToHexString("Ahmed");
         //VPKParser vpkTest = new VPKParser(new FileStream("D:/Steam/SteamApps/common/Counter-Strike Global Offensive/csgo/pak01_dir.vpk", FileMode.Open));

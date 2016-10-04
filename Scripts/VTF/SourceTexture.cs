@@ -597,7 +597,7 @@ public class SourceTexture
                         mipmapBufferOffset += ComputeMipmapSize(vtfHeader.width, vtfHeader.height, vtfHeader.depth, i, vtfHeader.highResImageFormat);
                     }
                     stream.Position = imageBufferOffset + mipmapBufferOffset;
-                    byte[] imageData = DataParser.ReadBytes(stream, (int)imageBufferSize);
+                    byte[] imageData = DataParser.ReadBytes(stream, imageBufferSize);
                     //Debug.Log("Image Buffer Info: " + imageBufferOffset + ", " + imageBufferSize);
 
                     Color[] vtfColors = DecompressImage(imageData, vtfHeader.width, vtfHeader.height, vtfHeader.highResImageFormat);
