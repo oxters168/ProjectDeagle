@@ -11,7 +11,7 @@ public class DemoParser
     public DemoHeader demoHeader;
     Stream stream;
 
-    public static uint prints = 0;
+    public static uint prints = 0, valuesRead = 0;
 
     public string locationToParse;
     public int port;
@@ -29,9 +29,11 @@ public class DemoParser
     public Dictionary<ServerClass, EquipmentElement> equipmentMapping = new Dictionary<ServerClass, EquipmentElement>();
     public Dictionary<int, EventDescriptor> gameEventDescriptors;
 
-    public Dictionary<EventDescriptor, Dictionary<string, object>> uniqueEvents = new Dictionary<EventDescriptor, Dictionary<string, object>>(); //Debug
+    public static Dictionary<ServerClass, Entity> uniqueEntities = new Dictionary<ServerClass, Entity>(); //Debug
+    //public Dictionary<EventDescriptor, Dictionary<string, object>> uniqueEvents = new Dictionary<EventDescriptor, Dictionary<string, object>>(); //For Debug purposes
 
-    public Entity[] entities = new Entity[MAX_ENTITIES];
+    //public Entity[] entities = new Entity[MAX_ENTITIES];
+    public Dictionary<int, Entity> entities = new Dictionary<int, Entity>();
 
     public List<StringTable> stringTables = new List<StringTable>();
 
@@ -61,17 +63,17 @@ public class DemoParser
         demoHeader.signOnLength = DataParser.ReadInt(stream);
 
         #region Debug Info
-        Debug.Log("Header: " + demoHeader.header);
-        Debug.Log("DemoProtocol: " + demoHeader.demoProtocol);
-        Debug.Log("NetworkProtocol: " + demoHeader.networkProtocol);
-        Debug.Log("ServerName: " + demoHeader.serverName);
-        Debug.Log("ClientName: " + demoHeader.clientName);
-        Debug.Log("MapName: " + demoHeader.mapName);
-        Debug.Log("GameDirectory: " + demoHeader.gameDirectory);
-        Debug.Log("PlaybackTime: " + demoHeader.playbackTime);
-        Debug.Log("Ticks: " + demoHeader.ticks);
-        Debug.Log("Frames: " + demoHeader.frames);
-        Debug.Log("SignOnLength: " + demoHeader.signOnLength);
+        //Debug.Log("Header: " + demoHeader.header);
+        //Debug.Log("DemoProtocol: " + demoHeader.demoProtocol);
+        //Debug.Log("NetworkProtocol: " + demoHeader.networkProtocol);
+        //Debug.Log("ServerName: " + demoHeader.serverName);
+        //Debug.Log("ClientName: " + demoHeader.clientName);
+        //Debug.Log("MapName: " + demoHeader.mapName);
+        //Debug.Log("GameDirectory: " + demoHeader.gameDirectory);
+        //Debug.Log("PlaybackTime: " + demoHeader.playbackTime);
+        //Debug.Log("Ticks: " + demoHeader.ticks);
+        //Debug.Log("Frames: " + demoHeader.frames);
+        //Debug.Log("SignOnLength: " + demoHeader.signOnLength);
         #endregion
     }
     public void ParseToEnd()
@@ -82,13 +84,23 @@ public class DemoParser
         }
 
         #region Debug Unique Events
-        for(int i = 0; i < uniqueEvents.Count; i++)
+        //for(int i = 0; i < uniqueEvents.Count; i++)
+        //{
+        //    string debugString = uniqueEvents.Keys.ElementAt(i).name + "\n";
+        //    for(int j = 0; j < uniqueEvents.Values.ElementAt(i).Count; j++)
+        //    {
+        //        debugString += "\n" + uniqueEvents.Values.ElementAt(i).Keys.ElementAt(j) + ": " + uniqueEvents.Values.ElementAt(i).Values.ElementAt(j);
+        //    }
+        //    Debug.Log(debugString);
+        //}
+        #endregion
+        #region Debug Unique Entities
+        foreach(KeyValuePair<ServerClass, Entity> entity in uniqueEntities)
         {
-            string debugString = uniqueEvents.Keys.ElementAt(i).name + "\n";
-            for(int j = 0; j < uniqueEvents.Values.ElementAt(i).Count; j++)
-            {
-                debugString += "\n" + uniqueEvents.Values.ElementAt(i).Keys.ElementAt(j) + ": " + uniqueEvents.Values.ElementAt(i).Values.ElementAt(j);
-            }
+            string debugString = entity.Value.id + ": ";
+            foreach (ServerClass baseClass in entity.Value.serverClass.baseClasses) debugString += baseClass.name + ".";
+            debugString += entity.Value.serverClass.dataTableName + "\n\n";
+            foreach (Entity.PropertyEntry propertyEntry in entity.Value.properties) if(!(propertyEntry.entry.propertyName.IndexOf("0") > -1 && propertyEntry.entry.propertyName.IndexOf("0") + 2 < propertyEntry.entry.propertyName.Length && char.IsDigit(propertyEntry.entry.propertyName[propertyEntry.entry.propertyName.IndexOf("0") + 1]) && char.IsDigit(propertyEntry.entry.propertyName[propertyEntry.entry.propertyName.IndexOf("0") + 2])) || propertyEntry.entry.propertyName.IndexOf("000") > -1) debugString += propertyEntry.entry.propertyName + ": " + propertyEntry.value + "\n";
             Debug.Log(debugString);
         }
         #endregion
