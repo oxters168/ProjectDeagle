@@ -1,4 +1,6 @@
-﻿#ifndef VACUUM_SHADERS_VC_UNLIT_CGINC
+﻿// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+
+#ifndef VACUUM_SHADERS_VC_UNLIT_CGINC
 #define VACUUM_SHADERS_VC_UNLIT_CGINC
 
 
@@ -83,7 +85,7 @@ vOutput vert(vInput v)
 	#ifdef V_VC_REFLECTION_ON
 		float3 viewDir = -ObjSpaceViewDir(v.vertex);
 		float3 viewRefl = reflect (viewDir, v.normal);
-		o.worldRefl = mul ((float3x3)_Object2World, viewRefl);
+		o.worldRefl = mul ((float3x3)unity_ObjectToWorld, viewRefl);
 	#endif
 				 
 	#ifdef V_VC_IBL_ON

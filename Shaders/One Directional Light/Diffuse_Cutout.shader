@@ -1,3 +1,5 @@
+// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+
 // VacuumShaders 2015
 // https://www.facebook.com/VacuumShaders
 
@@ -106,7 +108,7 @@ Shader "VacuumShaders/Vertex Color/One Directional Light/Cutout"
 				v2f_surf o;
 				UNITY_INITIALIZE_OUTPUT(v2f_surf,o);	
 	
-				o.worldPos =  mul(_Object2World, v.vertex).xyz;
+				o.worldPos =  mul(unity_ObjectToWorld, v.vertex).xyz;
 				#ifdef V_VC_MAIN_COLORS_ON
 					o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
 				#endif

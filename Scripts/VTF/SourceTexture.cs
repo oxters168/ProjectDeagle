@@ -6,21 +6,64 @@ using System.IO;
 
 public class SourceTexture
 {
+    private enum TextureType { None = 0, VTF, ColorData, Plain, }
+
     private static Dictionary<string, SourceTexture> loadedTextures = new Dictionary<string, SourceTexture>();
     private static Dictionary<string, Color> plainTextures = new Dictionary<string, Color>();
     private static Dictionary<string, string[]> vmtFiles = new Dictionary<string, string[]>();
     private static Texture2D sharedMissing = Resources.Load<Texture2D>("Textures/Plain/Missing");
     //public FaceMesh face { get; private set; }
     public string location { get; private set; }
-    public Texture2D texture { get; private set; }
+
+    private Texture2D texture;
+    private object textureData;
+    private TextureType textureType;
 
     private SourceTexture(string textureLocation)
     {
         location = textureLocation;
-        texture = sharedMissing;
+        //texture = sharedMissing;
+        //textureType = TextureType.Plain;
         loadedTextures.Add(location, this);
     }
 
+    public Texture2D GetTexture()
+    {
+        if (texture == null)
+        {
+            if(textureType == TextureType.VTF)
+            {
+                texture = LoadVTFFile((byte[])textureData);
+            }
+            else if(textureType == TextureType.ColorData)
+            {
+                texture = new Texture2D(0, 0);
+                texture.LoadImage((byte[])textureData);
+            }
+            else if(textureType == TextureType.Plain)
+            {
+                texture = new Texture2D(32, 32);
+                Color[] plainTexturePixels = new Color[texture.width * texture.height];
+                for (int i = 0; i < plainTexturePixels.Length; i++) plainTexturePixels[i] = (Color)textureData;
+                texture.SetPixels(plainTexturePixels);
+                texture.Apply();
+            }
+            else
+            {
+                texture = sharedMissing;
+                textureType = TextureType.Plain;
+            }
+
+            if (texture != null)
+            {
+                if (ApplicationPreferences.averageTextures) AverageTexture(texture);
+                else if (ApplicationPreferences.decreaseTextureSizes) DecreaseTextureSize(texture, ApplicationPreferences.maxSizeAllowed);
+                texture.wrapMode = TextureWrapMode.Repeat;
+            }
+        }
+
+        return texture;
+    }
     public static SourceTexture GrabTexture(string rawStringPath)
     {
         SourceTexture srcTexture = null;
@@ -51,40 +94,48 @@ public class SourceTexture
                 {
                     if (isVTF)
                     {
-                        srcTexture.texture = LoadVTFFile(bytes);
+                        //srcTexture.texture = LoadVTFFile(bytes);
+                        srcTexture.textureType = TextureType.VTF;
+                        srcTexture.textureData = bytes;
                     }
                     else
                     {
-                        srcTexture.texture = new Texture2D(0, 0);
-                        srcTexture.texture.LoadImage(bytes);
+                        //srcTexture.texture = new Texture2D(0, 0);
+                        //srcTexture.texture.LoadImage(bytes);
+                        srcTexture.textureType = TextureType.ColorData;
+                        srcTexture.textureData = bytes;
                     }
                     bytes = null;
                 }
             }
             else if(foundInVPK)
             {
-                srcTexture.texture = LoadVTFFile(ApplicationPreferences.vpkParser.LoadFile("/materials/" + srcTexture.location + ".vtf"));
+                //srcTexture.texture = LoadVTFFile(ApplicationPreferences.vpkParser.LoadFile("/materials/" + srcTexture.location + ".vtf"));
+                srcTexture.textureType = TextureType.VTF;
+                srcTexture.textureData = ApplicationPreferences.vpkParser.LoadFile("/materials/" + srcTexture.location + ".vtf");
             }
             else if(plainTextures.ContainsKey(srcTexture.location + ".png"))
             {
-                Color currentPlainTextureColor = plainTextures[srcTexture.location + ".png"];
-                srcTexture.texture = new Texture2D(32, 32);
-                Color[] plainTexturePixels = new Color[srcTexture.texture.width * srcTexture.texture.height];
-                for (int i = 0; i < plainTexturePixels.Length; i++) plainTexturePixels[i] = currentPlainTextureColor;
-                srcTexture.texture.SetPixels(plainTexturePixels);
-                srcTexture.texture.Apply();
+                //Color currentPlainTextureColor = plainTextures[srcTexture.location + ".png"];
+                //srcTexture.texture = new Texture2D(32, 32);
+                //Color[] plainTexturePixels = new Color[srcTexture.texture.width * srcTexture.texture.height];
+                //for (int i = 0; i < plainTexturePixels.Length; i++) plainTexturePixels[i] = currentPlainTextureColor;
+                //srcTexture.texture.SetPixels(plainTexturePixels);
+                //srcTexture.texture.Apply();
+                srcTexture.textureType = TextureType.Plain;
+                srcTexture.textureData = plainTextures[srcTexture.location + ".png"];
             }
             else
             {
                 Debug.Log("Could not find Texture: " + srcTexture.location + " Raw Path: " + rawStringPath);
             }
 
-            if (srcTexture.texture != null)
-            {
-                if (ApplicationPreferences.averageTextures) AverageTexture(srcTexture.texture);
-                else if (ApplicationPreferences.decreaseTextureSizes) DecreaseTextureSize(srcTexture.texture, ApplicationPreferences.maxSizeAllowed);
-                srcTexture.texture.wrapMode = TextureWrapMode.Repeat;
-            }
+            //if (srcTexture.texture != null)
+            //{
+            //    if (ApplicationPreferences.averageTextures) AverageTexture(srcTexture.texture);
+            //    else if (ApplicationPreferences.decreaseTextureSizes) DecreaseTextureSize(srcTexture.texture, ApplicationPreferences.maxSizeAllowed);
+            //    srcTexture.texture.wrapMode = TextureWrapMode.Repeat;
+            //}
         }
 
         return srcTexture;

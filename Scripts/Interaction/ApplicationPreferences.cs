@@ -3,31 +3,33 @@
 public class ApplicationPreferences {
 
     public const string
+        FIRST_RUN = "First_Run",
         MANUAL_FONT_SIZE_PREFS = "Manual_Font_Size", FONT_SIZE_PREFS = "Font_Size", COMBINE_PREFS = "Combine_Meshes", AVERAGE_PREFS = "Average_Textures", DECREASE_PREFS = "Decrease_Textures", MAX_SIZE = "Max_Texture_Size",
         USE_VPK = "Use_VPK", USE_TEX = "Use_Textures", USE_MAPS = "Use_Maps", USE_MODELS = "Use_Models", USE_SFX = "Use_SFX",
         VPK_LOC = "VPK_Location", MAPS_LOC = "Maps_Location", TEX_LOC = "Textures_Location", MODELS_LOC = "Models_Location", SFX_LOC = "SFX_Location",
         CURRENT_REPLAYS_DIR = "Current_Replays_Dir", CURRENT_MAPS_DIR = "Current_Maps_Dir";
 
+    public static bool firstRun;
     public static bool fullscreen;
-    public static int fontSize = 12;
-    public static bool manualFontSize = false;
+    //public static int fontSize = 12;
+    //public static bool manualFontSize = false;
 
     public static bool averageTextures, decreaseTextureSizes, combineMeshes;
-    public static int maxSizeAllowed = 128;
+    public static int maxSizeAllowed = 128, simultaneousFace = 32;
     public static bool useVPK, useTextures, useMaps, useModels, useSFX;
     public static string vpkDir, mapsDir, texturesDir, modelsDir, sfxDir;
     public static string currentReplaysDir, currentMapsDir;
     public static Material playerMaterial = Resources.Load<Material>("Materials/PlayerMaterial"), mapMaterial = Resources.Load<Material>("Materials/MapMaterial"), mapAtlasMaterial = Resources.Load<Material>("Materials/MapAtlasMaterial");
-    public static Color ctColor = new Color(0.263f, 0.369f, 0.486f), tColor = new Color(0.953f, 0.702f, 0.286f);
+    public static Color ctColor = new Color((67f / 255f), (94f / 255f), (124f / 255f)), tColor = new Color((243f / 255f), (179f / 255f), (73f / 255f));
 
     public static VPKParser vpkParser = null;
 
     public static void LoadSavedPreferences()
     {
-        fontSize = PlayerPrefs.GetInt(FONT_SIZE_PREFS);
-        if (fontSize >= OxGUI.OxBase.MIN_FONT_SIZE)
+        firstRun = PlayerPrefs.GetInt(FIRST_RUN) == 0;
+        if (!firstRun)
         {
-            manualFontSize = PlayerPrefs.GetInt(MANUAL_FONT_SIZE_PREFS) != 0;
+            //manualFontSize = PlayerPrefs.GetInt(MANUAL_FONT_SIZE_PREFS) != 0;
             combineMeshes = PlayerPrefs.GetInt(COMBINE_PREFS) != 0;
             averageTextures = PlayerPrefs.GetInt(AVERAGE_PREFS) != 0;
             decreaseTextureSizes = PlayerPrefs.GetInt(DECREASE_PREFS) != 0;
@@ -50,8 +52,9 @@ public class ApplicationPreferences {
         }
         else
         {
-            PlayerPrefs.SetInt(FONT_SIZE_PREFS, fontSize = 12);
-            PlayerPrefs.SetInt(MANUAL_FONT_SIZE_PREFS, manualFontSize ? 1 : 0);
+            PlayerPrefs.SetInt(FIRST_RUN, 1);
+            //PlayerPrefs.SetInt(FONT_SIZE_PREFS, fontSize = 12);
+            //PlayerPrefs.SetInt(MANUAL_FONT_SIZE_PREFS, manualFontSize ? 1 : 0);
             PlayerPrefs.SetInt(COMBINE_PREFS, (combineMeshes = true) ? 1 : 0);
             PlayerPrefs.SetInt(AVERAGE_PREFS, averageTextures ? 1 : 0);
             PlayerPrefs.SetInt(DECREASE_PREFS, (decreaseTextureSizes = true) ? 1 : 0);
@@ -87,8 +90,8 @@ public class ApplicationPreferences {
         }
 
         fullscreen = Screen.fullScreen;
-        OxGUI.OxBase.manualSizeAllText = manualFontSize;
-        OxGUI.OxBase.allTextSize = fontSize;
+        //OxGUI.OxBase.manualSizeAllText = manualFontSize;
+        //OxGUI.OxBase.allTextSize = fontSize;
     }
 
     public static void UpdateVPKParser()
@@ -108,6 +111,11 @@ public class ApplicationPreferences {
         PlayerPrefs.SetInt(AVERAGE_PREFS, 0);
         PlayerPrefs.SetInt(DECREASE_PREFS, 0);
         PlayerPrefs.SetInt(MAX_SIZE, 0);
+        PlayerPrefs.SetInt(USE_VPK, 0);
+        PlayerPrefs.SetInt(USE_TEX, 0);
+        PlayerPrefs.SetInt(USE_MAPS, 0);
+        PlayerPrefs.SetInt(USE_MODELS, 0);
+        PlayerPrefs.SetInt(USE_SFX, 0);
         PlayerPrefs.SetString(VPK_LOC, "");
         PlayerPrefs.SetString(MAPS_LOC, "");
         PlayerPrefs.SetString(TEX_LOC, "");
@@ -115,5 +123,6 @@ public class ApplicationPreferences {
         PlayerPrefs.SetString(SFX_LOC, "");
         PlayerPrefs.SetString(CURRENT_MAPS_DIR, "");
         PlayerPrefs.SetString(CURRENT_REPLAYS_DIR, "");
+        PlayerPrefs.SetInt(FIRST_RUN, 0);
     }
 }

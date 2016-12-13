@@ -1,4 +1,6 @@
-﻿public class UnityThreadJob
+﻿//http://answers.unity3d.com/questions/357033/unity3d-and-c-coroutines-vs-threading.html
+
+public class UnityThreadJob
 {
     private bool unsafeIsDone = false;
     private object isDoneLock = new object();

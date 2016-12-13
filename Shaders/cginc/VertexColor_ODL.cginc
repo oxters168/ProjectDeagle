@@ -1,4 +1,6 @@
-﻿#ifndef VACUUM_SHADERS_VC_ODL_CGINC
+﻿// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+
+#ifndef VACUUM_SHADERS_VC_ODL_CGINC
 #define VACUUM_SHADERS_VC_ODL_CGINC
 
 
@@ -92,7 +94,7 @@ vOutput vert(vInput v)
 	#ifdef V_VC_REFLECTION_ON
 		float3 viewDir = -ObjSpaceViewDir(v.vertex);
 		float3 viewRefl = reflect (viewDir, v.normal);
-		o.worldRefl = mul ((float3x3)_Object2World, viewRefl);
+		o.worldRefl = mul ((float3x3)unity_ObjectToWorld, viewRefl);
 	#endif
 
 				 
@@ -112,7 +114,7 @@ vOutput vert(vInput v)
 			o.vlight = shlight;
 					
 			#ifdef VERTEXLIGHT_ON
-				float3 worldPos = mul(_Object2World, v.vertex).xyz;
+				float3 worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 
 				o.vlight += Shade4PointLights (unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
 											   unity_LightColor[0].rgb, unity_LightColor[1].rgb, unity_LightColor[2].rgb, unity_LightColor[3].rgb,

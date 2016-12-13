@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
-using System;
+//using System;
 using System.IO;
 
-public class BSPParser
+public class BSPFileParser
 {
     public const string TEXTURE_STRING_DATA_SPLITTER = ":";
 
@@ -17,7 +17,24 @@ public class BSPParser
     public dgamelumpheader_t gameLumpHeader;
     //public dgamelump_t[] gameLumps;
 
-    public BSPParser(Stream stream)
+    #region Geometry
+    private Vector3[] vertices;
+    private dedge_t[] edges;
+    private dface_t[] faces;
+    private int[] surfedges;
+
+    private ddispinfo_t[] dispInfo;
+    private dDispVert[] dispVerts;
+
+    private texinfo_t[] texInfo;
+    private dtexdata_t[] texData;
+    private int[] texStringTable;
+    private string textureStringData;
+
+    private StaticProps_t staticProps;
+    #endregion
+
+    public BSPFileParser(Stream stream)
 	{
 		this.stream = stream;
 		lumps = new lump_t[64];
@@ -28,11 +45,6 @@ public class BSPParser
 		LoadLumps();
         LoadGameLumps();
 		mapRevision = DataParser.ReadInt(stream);
-
-		//Debug.Log("[BSPLoader] File loaded");//, ((BSPRenderer)GameView.instance.BSPRenderer).mapName);
-        //Debug.Log("[BSPLoader] Identifier: " + identifier);
-		//Debug.Log("[BSPLoader] Version: " + version);
-		//Debug.Log("[BSPLoader] Map Revision: " + mapRevision);
 	}
 
 	private void LoadLumps()

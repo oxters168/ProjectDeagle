@@ -149,11 +149,11 @@ public class CameraControl : MonoBehaviour {
         }
         else
         {
-            if (OxGUI.OxBase.currentlyHighlighted == null && OxGUI.OxBase.currentlyPressed == null)
-            {
+            //if (OxGUI.OxBase.currentlyHighlighted == null && OxGUI.OxBase.currentlyPressed == null)
+            //{
                 Camera.main.transform.rotation = (Quaternion.AngleAxis(horizontal, Vector3.up) * Camera.main.transform.rotation) * Quaternion.AngleAxis(vertical, Vector3.right);
                 Camera.main.transform.position += Camera.main.transform.forward * scroll;
-            }
+            //}
         }
 	}
 
@@ -215,9 +215,12 @@ public class CameraControl : MonoBehaviour {
 
     public void ShowSkybox(bool enable)
     {
-        //Skybox skybox = GetComponent<Skybox>();
-        //if (skybox != null) skybox.enabled = enable;
         if (enable) GetComponent<Camera>().clearFlags = CameraClearFlags.Skybox;
         else GetComponent<Camera>().clearFlags = CameraClearFlags.SolidColor;
+    }
+    public void Explore(bool enable)
+    {
+        ShowSkybox(enable);
+        blockControl = !enable;
     }
 }

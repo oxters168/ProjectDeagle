@@ -4,4 +4,6 @@ Models/*
 Prefabs/*
 Scenes/*
 Textures/*
+Scripts/NAudio/*
+Scripts/FBX/*
 *.meta

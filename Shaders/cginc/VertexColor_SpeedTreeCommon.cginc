@@ -1,3 +1,5 @@
+// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+
 #ifndef VACUUM_SHADERS_VC_SPEEDTREE_COMMON_INCLUDED
 #define VACUUM_SHADERS_VC_SPEEDTREE_COMMON_INCLUDED
 
@@ -61,7 +63,7 @@ void SpeedTreeVert(inout SpeedTreeVB IN, out Input OUT)
 	OUT.color.rgb *= IN.color.rgb; 
 
 	#ifdef EFFECT_HUE_VARIATION
-		float hueVariationAmount = frac(_Object2World[0].w + _Object2World[1].w + _Object2World[2].w);
+		float hueVariationAmount = frac(unity_ObjectToWorld[0].w + unity_ObjectToWorld[1].w + unity_ObjectToWorld[2].w);
 		hueVariationAmount += frac(IN.vertex.x + IN.normal.y + IN.normal.x) * 0.5 - 0.3;
 		OUT.HueVariationAmount = saturate(hueVariationAmount * _HueVariation.a);
 	#endif
