@@ -1,0 +1,3 @@
+[submodule "Assets/Submodules/UnitySourceEngine"]
+	path = Assets/Submodules/UnitySourceEngine
+	url = https://github.com/oxters168/UnitySourceEngine
