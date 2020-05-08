@@ -1,0 +1,14 @@
+ar_shoots
+1. 03:36.22 (Original)
+2. 00:21.16 (Removed logging)
+3. 00:13.76 (Decreased yield frequency during build routine)
+4. 00:17.09 (Set interval to 50)
+5. 00:15.44 (Set interval to 25)
+6. 00:14.53 (Made thread priority lower than normal)
+7. 00:17.72 (Thread priority lowest)
+
+ar_baggage
+1. 00:29.64
+2. 00:17.99
+3. 00:20.71
+4. 00:17.10

@@ -1,0 +1,1 @@
+There are two protobuf-net dlls. One is for creating the ProtoModel and the other is for when building the application. I don't remember which one's which though :$

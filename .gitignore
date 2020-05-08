@@ -64,6 +64,9 @@ $RECYCLE.BIN/
 MemoryCaptures
 
 #Imported
+Assets/Resources/AdMobData/*
+!Assets/Resources/AdMobData/.gitkeep
+
 Assets/Gizmos/Doozy/*
 !Assets/Gizmos/Doozy/.gitkeep
 Assets/GoogleMobileAds/*

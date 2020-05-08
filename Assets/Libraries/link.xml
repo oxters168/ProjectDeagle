@@ -1,0 +1,8 @@
+<linker>
+  <assembly fullname="ProtoBuf" preserve="all"/>
+  <assembly fullname="ProtoBuf.Serializers" preserve="all"/>
+  <assembly fullname="ProtoBuf.Meta" preserve="all"/>
+  <assembly fullname="ProtoBuf.Compiler" preserve="all"/>
+  <assembly fullname="ProtoBuf.ServiceModel" preserve="all"/>
+  <assembly fullname="MyProtoModel" preserve="all"/>
+</linker>

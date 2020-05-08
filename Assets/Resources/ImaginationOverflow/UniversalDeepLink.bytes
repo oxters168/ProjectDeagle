@@ -1,0 +1,52 @@
+{
+    "_steamId": "",
+    "_displayName": "GO:View",
+    "_globalConfiguration": {
+        "_domainProtocols": [],
+        "_deepLinkingProtocols": [
+            {
+                "_scheme": "steam",
+                "_host": "",
+                "_path": ""
+            }
+        ],
+        "_initialized": false
+    },
+    "_customDeepLinkingProtocols": [
+        {
+            "_domainProtocols": [],
+            "_deepLinkingProtocols": [],
+            "_initialized": false
+        },
+        {
+            "_domainProtocols": [],
+            "_deepLinkingProtocols": [],
+            "_initialized": false
+        },
+        {
+            "_domainProtocols": [],
+            "_deepLinkingProtocols": [],
+            "_initialized": false
+        },
+        {
+            "_domainProtocols": [],
+            "_deepLinkingProtocols": [],
+            "_initialized": false
+        },
+        {
+            "_domainProtocols": [],
+            "_deepLinkingProtocols": [],
+            "_initialized": false
+        },
+        {
+            "_domainProtocols": [],
+            "_deepLinkingProtocols": [],
+            "_initialized": false
+        },
+        {
+            "_domainProtocols": [],
+            "_deepLinkingProtocols": [],
+            "_initialized": false
+        }
+    ]
+}

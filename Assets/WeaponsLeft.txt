@@ -1,0 +1,19 @@
+		Unknown = 0,
+
+		//Pistoles
+		P250 = 3,
+		FiveSeven = 5,
+
+		//SMGs
+		Bizon = 103,
+
+		//Heavy
+		Swag7 = 203,
+
+		//Rifle
+
+		//Equipment
+		DefuseKit = 406,
+		World = 407,
+
+		//Grenades
