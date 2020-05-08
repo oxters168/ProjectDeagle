@@ -16,9 +16,6 @@
 [submodule "Assets/Submodules/SteamWebAPI2"]
 	path = Assets/Submodules/SteamWebAPI2
 	url = https://github.com/oxters168/SteamWebAPI2
-[submodule "Assets/Submodules/Newtonsoft.Json"]
-	path = Assets/Submodules/Newtonsoft.Json
-	url = https://github.com/JamesNK/Newtonsoft.Json
 [submodule "Assets/Submodules/Steam.Models"]
 	path = Assets/Submodules/Steam.Models
 	url = https://github.com/oxters168/Steam.Models
