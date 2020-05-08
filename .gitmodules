@@ -1,3 +1,24 @@
 [submodule "Assets/Submodules/UnitySourceEngine"]
 	path = Assets/Submodules/UnitySourceEngine
 	url = https://github.com/oxters168/UnitySourceEngine
+[submodule "Assets/Submodules/DepotDownloader"]
+	path = Assets/Submodules/DepotDownloader
+	url = https://github.com/oxters168/DepotDownloader
+[submodule "Assets/Submodules/DemoInfo"]
+	path = Assets/Submodules/DemoInfo
+	url = https://github.com/oxters168/demoinfo
+[submodule "Assets/Submodules/SteamKit"]
+	path = Assets/Submodules/SteamKit
+	url = https://github.com/oxters168/SteamKit
+[submodule "Assets/Submodules/AdMobManagerUnity"]
+	path = Assets/Submodules/AdMobManagerUnity
+	url = https://github.com/oxters168/AdMobManagerUnity
+[submodule "Assets/Submodules/SteamWebAPI2"]
+	path = Assets/Submodules/SteamWebAPI2
+	url = https://github.com/oxters168/SteamWebAPI2
+[submodule "Assets/Submodules/Newtonsoft.Json"]
+	path = Assets/Submodules/Newtonsoft.Json
+	url = https://github.com/JamesNK/Newtonsoft.Json
+[submodule "Assets/Submodules/Steam.Models"]
+	path = Assets/Submodules/Steam.Models
+	url = https://github.com/oxters168/Steam.Models
