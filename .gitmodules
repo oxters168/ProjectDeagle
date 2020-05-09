@@ -19,3 +19,6 @@
 [submodule "Assets/Submodules/Steam.Models"]
 	path = Assets/Submodules/Steam.Models
 	url = https://github.com/oxters168/Steam.Models
+[submodule "Assets/Submodules/UnityHelpers"]
+	path = Assets/Submodules/UnityHelpers
+	url = https://github.com/oxters168/UnityHelpers

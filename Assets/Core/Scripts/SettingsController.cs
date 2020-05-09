@@ -28,7 +28,7 @@ public class SettingsController : MonoBehaviour
     public static float renderPercent;
 
     public UserViewController viewingCamera;
-    public UnityHelpers.RenderCameraController mainRenderCamera;
+    public GameObject mainRenderCamera;
     public Material renderTextureMaterial;
 
     public GameObject frameRateObject;
@@ -238,7 +238,7 @@ public class SettingsController : MonoBehaviour
     public void SetViewingCamera(bool onOff)
     {
         viewingCamera.gameObject.SetActive(onOff);
-        mainRenderCamera.gameObject.SetActive(onOff);
+        mainRenderCamera.SetActive(onOff);
     }
     private void OnGameEventReceived(Doozy.Engine.GameEventMessage message)
     {
